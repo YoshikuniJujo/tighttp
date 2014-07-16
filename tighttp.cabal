@@ -1,0 +1,15 @@
+build-type:	Simple
+cabal-version:	>= 1.8
+
+name:		tighttp
+version:	0.0.0.0
+
+library
+    hs-source-dirs:	src
+    exposed-modules:	Client, Server
+    other-modules:	HttpTypes
+    build-depends:
+        base == 4.*, bytestring == 0.10.*, handle-like == 0.1.*,
+        old-locale == 1.0.*, time == 1.4.*
+    ghc-options:	-Wall
+    extensions:		PatternGuards
