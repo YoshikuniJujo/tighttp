@@ -4,7 +4,7 @@ tighttp
 acronym
 -------
 
-Tiny Incrementally-Growing HTTP library
+Tiny and Incrementally-Growing HTTP library
 
 pronounciation
 --------------
