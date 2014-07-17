@@ -34,9 +34,9 @@ data Request
 	| RequestRaw RequestType Uri Version [(BS.ByteString, BS.ByteString)]
 	deriving Show
 
-requestBodyLength :: Request -> Int
-requestBodyLength (RequestPost _ _ p) = contentLength . fromJust $ postContentLength p
-requestBodyLength _ = 0
+requestBodyLength :: Request -> Maybe Int
+requestBodyLength (RequestPost _ _ p) = contentLength <$> postContentLength p
+requestBodyLength _ = Nothing
 
 postAddBody :: Request -> BS.ByteString -> Request
 postAddBody (RequestPost u v p) b = RequestPost u v $ p { postBody = b }
@@ -364,8 +364,8 @@ parseCacheControl cc = CacheControlRaw cc
 data Response = Response {
 	responseVersion :: Version,
 	responseStatusCode :: StatusCode,
-	responseDate :: UTCTime,
-	responseContentLength :: ContentLength,
+	responseDate :: Maybe UTCTime,
+	responseContentLength :: Maybe ContentLength,
 	responseContentType :: ContentType,
 	responseServer :: Maybe [Product],
 	responseLastModified :: Maybe UTCTime,
@@ -392,8 +392,8 @@ parseResponseSep v sc kvs = Response {
 	responseVersion = v,
 	responseStatusCode = sc,
 	responseDate = readTime defaultTimeLocale "%a, %d %b %Y %H:%M:%S" .
-		BSC.unpack . initN 4 . fromJust $ lookup "Date" kvs,
-	responseContentLength = ContentLength . read . BSC.unpack . fromJust $
+		BSC.unpack . initN 4 <$> lookup "Date" kvs,
+	responseContentLength = ContentLength . read . BSC.unpack <$>
 		lookup "Content-Length" kvs,
 	responseContentType = parseContentType . fromJust $
 		lookup "Content-Type" kvs,
@@ -424,14 +424,14 @@ parseResponseLine src = case BSC.span (/= ' ') src of
 parseStatusCode :: BS.ByteString -> StatusCode
 parseStatusCode sc
 	| ("200", _) <- BSC.span (not . isSpace) sc = OK
-parseStatusCode _ = error "parseStatusCode: bad status code"
+parseStatusCode sc = error $ "parseStatusCode: bad status code: " ++ BSC.unpack sc
 
 showResponse :: Response -> [Maybe BS.ByteString]
 showResponse r =
 	[	Just $ showVersion (responseVersion r) +++ " " +++
 			showStatusCode (responseStatusCode r),
-		Just $ "Date: " +++ showTime (responseDate r),
-		Just $ "Content-Length: " +++
+		Just $ "Date: " +++ maybe "" showTime (responseDate r),
+		Just $ "Content-Length: " +++ maybe ""
 			showContentLength (responseContentLength r),
 		Just $ "Content-Type: " +++
 			showContentType (responseContentType r),

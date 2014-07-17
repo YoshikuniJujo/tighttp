@@ -16,7 +16,7 @@ httpServer :: HandleLike h => h -> BS.ByteString -> HandleMonad h BS.ByteString
 httpServer cl cnt = do
 	h <- hlGetHeader cl
 	let req = parse h
-	b <- hlGet cl $ requestBodyLength req
+	b <- hlGet cl $ maybe 0 id $ requestBodyLength req
 	let req' = postAddBody req b
 	hlDebug cl "critical" . BSC.pack . (++ "\n") $ show req'
 	mapM_ (hlDebug cl "critical" . (`BS.append` "\n")) .
@@ -28,9 +28,9 @@ mkContents :: BS.ByteString -> Response
 mkContents cnt = Response {
 	responseVersion = Version 1 1,
 	responseStatusCode = OK,
-	responseDate = readTime defaultTimeLocale
+	responseDate = Just $ readTime defaultTimeLocale
 		"%a, %d %b %Y %H:%M:%S" "Wed, 07 May 2014 02:27:34",
-	responseContentLength = ContentLength $ BS.length cnt,
+	responseContentLength = Just $ ContentLength $ BS.length cnt,
 	responseContentType = ContentType ("text", "plain"),
 	responseServer = Nothing,
 	responseLastModified = Nothing,

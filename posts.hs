@@ -12,9 +12,12 @@ import Client
 
 main :: IO ()
 main = do
-	(pn :: Int) : _ <- mapM readIO =<< getArgs
-	ca <- readCertificateStore ["cacert.sample_pem"]
-	sv <- connectTo "localhost" (PortNumber $ fromIntegral pn)
+	addr : spn : _ <- getArgs
+	(pn :: Int) <- readIO spn
+	ca <- readCertificateStore [
+		"cacert.sample_pem",
+		"/etc/ssl/certs/GeoTrust_Global_CA.pem" ]
+	sv <- connectTo addr (PortNumber $ fromIntegral pn)
 	g <- cprgCreate <$> createEntropyPool :: IO SystemRNG
 	(`run` g) $ do
 		t <- open sv ["TLS_RSA_WITH_AES_128_CBC_SHA"] [] ca
