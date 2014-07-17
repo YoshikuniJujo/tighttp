@@ -27,8 +27,8 @@ source-repository	this
 
 library
     hs-source-dirs:	src
-    exposed-modules:	Client, Server
-    other-modules:	HttpTypes
+    exposed-modules:	Network.TigHTTP.Client, Network.TigHTTP.Server
+    other-modules:	Network.TigHTTP.HttpTypes
     build-depends:
         base == 4.*, bytestring == 0.10.*, handle-like == 0.1.*,
         old-locale == 1.0.*, time == 1.4.*

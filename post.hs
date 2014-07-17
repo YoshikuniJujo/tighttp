@@ -3,7 +3,7 @@
 import System.Environment
 import Network
 
-import Client
+import Network.TigHTTP.Client
 
 main :: IO ()
 main = do

@@ -8,7 +8,7 @@ import Network.PeyoTLS.Client
 import Network.PeyoTLS.ReadFile
 import "crypto-random" Crypto.Random
 
-import Client
+import Network.TigHTTP.Client
 
 main :: IO ()
 main = do

@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module HttpTypes (
+module Network.TigHTTP.HttpTypes (
 	Version(..),
 	Request(..), RequestType(..), Uri(..), Get(..), CacheControl(..),
 	Accept(..), AcceptLanguage(..), Qvalue(..),

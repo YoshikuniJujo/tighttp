@@ -1,11 +1,11 @@
 {-# LANGUAGE ScopedTypeVariables, OverloadedStrings #-}
 
-module Client (httpGet, httpPost) where
+module Network.TigHTTP.Client (httpGet, httpPost) where
 
 import Control.Monad
 import Data.Maybe
 
-import HttpTypes
+import Network.TigHTTP.HttpTypes
 import Data.HandleLike
 
 import qualified Data.ByteString as BS

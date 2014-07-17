@@ -1,6 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables, OverloadedStrings, PackageImports #-}
 
-module Server (httpServer) where
+module Network.TigHTTP.Server (httpServer) where
 
 import Control.Monad
 import Data.Maybe
@@ -9,7 +9,7 @@ import qualified Data.ByteString.Char8 as BSC
 import Data.Time
 import System.Locale
 
-import HttpTypes
+import Network.TigHTTP.HttpTypes
 import Data.HandleLike
 
 httpServer :: HandleLike h => h -> BS.ByteString -> HandleMonad h BS.ByteString

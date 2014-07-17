@@ -4,8 +4,7 @@ import Control.Monad
 import Control.Concurrent
 import System.Environment
 import Network
-
-import Server
+import Network.TigHTTP.Server
 
 main :: IO ()
 main = do

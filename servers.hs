@@ -7,11 +7,11 @@ import Control.Concurrent
 import System.Environment
 import Network
 
-import Server
 import Data.HandleLike
 
 import Network.PeyoTLS.ReadFile
 import Network.PeyoTLS.Server
+import Network.TigHTTP.Server
 import "crypto-random" Crypto.Random
 
 main :: IO ()
