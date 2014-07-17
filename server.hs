@@ -6,6 +6,8 @@ import System.Environment
 import Network
 import Network.TigHTTP.Server
 
+import qualified Data.ByteString.Lazy as LBS
+
 main :: IO ()
 main = do
 	(pn :: Int) : _ <- mapM readIO =<< getArgs
@@ -14,6 +16,8 @@ main = do
 	forever $ do
 		(client, _, _) <- accept socket
 		_ <- forkIO $ do
-			ret <- httpServer client "Good afternoon, world!\n"
+			ret <- httpServer client $ LBS.fromChunks [
+				"Good afternoon, world!\n",
+				"Good night, world!\n" ]
 			print ret
 		return ()

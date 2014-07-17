@@ -7,6 +7,7 @@ module Network.TigHTTP.HttpTypes (
 	Host(..), Product(..), Connection(..),
 	Response(..), StatusCode(..), ContentLength(..), contentLength,
 	ContentType(..),
+	TransferEncoding(..),
 
 	parse, parseResponse, showRequest, showResponse, (+++),
 	myLast, requestBodyLength, postAddBody, getPostBody,
@@ -439,8 +440,8 @@ showResponse r =
 	[	Just $ showVersion (responseVersion r) +++ " " +++
 			showStatusCode (responseStatusCode r),
 		Just $ "Date: " +++ maybe "" showTime (responseDate r),
-		Just $ "Content-Length: " +++ maybe ""
-			showContentLength (responseContentLength r),
+		("Content-Length: " +++) . showContentLength <$>
+			(responseContentLength r),
 		("Transfer-Encoding: " +++) . showTransferEncoding <$>
 			responseTransferEncoding r,
 		Just $ "Content-Type: " +++
