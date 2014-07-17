@@ -40,7 +40,7 @@ httpGet = gets fst >>= \sv -> do
 
 httpContent :: HandleLike h => Maybe Int -> ClientM h BS.ByteString
 httpContent (Just n) = gets fst >>= lift . flip hlGet n
-httpContent _ = getChunked -- gets fst >>= lift . flip hlGet 100
+httpContent _ = getChunked
 
 getChunked :: HandleLike h => ClientM h BS.ByteString
 getChunked = gets fst >>= \h -> do
@@ -56,7 +56,8 @@ httpPost :: HandleLike h => BS.ByteString -> ClientM h BS.ByteString
 httpPost cnt = gets fst >>= \sv -> do
 	lift . hlPutStrLn sv . requestToString . flip post cnt =<< gets snd
 	res <- lift $ parseResponse `liftM` hGetHeader sv
-	cnt' <- lift . hlGet sv . maybe 10 contentLength $ responseContentLength res
+--	cnt' <- lift . hlGet sv . maybe 10 contentLength $ responseContentLength res
+	cnt' <- httpContent $ contentLength <$> responseContentLength res
 	let res' = res { responseBody = cnt' }
 	lift . hlDebug sv "critical" . (`BS.append` "\n") $ responseToString res'
 	return cnt'
