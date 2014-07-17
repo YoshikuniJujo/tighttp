@@ -10,4 +10,5 @@ pronounciation
 --------------
 
 * Tight Teepee
+* Tighty
 * Tig
