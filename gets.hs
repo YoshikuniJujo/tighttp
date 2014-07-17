@@ -17,7 +17,8 @@ main = do
 	(pn :: Int) <- readIO spn
 	ca <- readCertificateStore [
 		"cacert.sample_pem",
-		"/etc/ssl/certs/GeoTrust_Global_CA.pem" ]
+		"/etc/ssl/certs/GeoTrust_Global_CA.pem",
+		"/etc/ssl/certs/DigiCert_High_Assurance_EV_Root_CA.pem" ]
 	sv <- connectTo addr (PortNumber $ fromIntegral pn)
 	g <- cprgCreate <$> createEntropyPool :: IO SystemRNG
 	(`P.run` g) $ do

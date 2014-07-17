@@ -7,6 +7,7 @@ import Network.TigHTTP.Client
 
 main :: IO ()
 main = do
-	(pn :: Int) : _ <- mapM readIO =<< getArgs
-	sv <- connectTo "localhost" (PortNumber $ fromIntegral pn)
+	addr : spn : _ <- getArgs
+	(pn :: Int) <- readIO spn
+	sv <- connectTo addr (PortNumber $ fromIntegral pn)
 	httpGet sv >>= print

@@ -42,6 +42,7 @@ request :: BS.ByteString
 request = crlf . catMaybes . showRequest . RequestGet (Uri "/") (Version 1 1) $
 	Get {
 		getHost = Just . Host "www.google.co.jp" $ Just 443,
+--		getHost = Just . Host "www.facebook.com" $ Just 443,
 		getUserAgent = Just [Product "Mozilla" (Just "5.0")],
 		getAccept = Just [Accept ("text", "plain") (Qvalue 1.0)],
 		getAcceptLanguage = Just [AcceptLanguage "ja" (Qvalue 1.0)],
