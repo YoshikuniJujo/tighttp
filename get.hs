@@ -15,4 +15,4 @@ main = do
 	sv <- connectTo addr (PortNumber $ fromIntegral pn)
 	run sv $ do
 		setHost (BSC.pack addr) 80
-		httpGet >>= liftIO . print
+		httpGet >>= liftIO . putStrLn . (++ "...") . take 100 . show

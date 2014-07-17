@@ -34,8 +34,9 @@ httpGet = gets fst >>= \sv -> do
 		. show $ responseTransferEncoding res
 	cnt <- httpContent $ contentLength <$> responseContentLength res
 	let res' = res { responseBody = cnt }
-	lift . mapM_ (hlDebug sv "critical" . (`BS.append` "\n"))
+	lift . mapM_ (hlDebug sv "critical" . (`BS.append` "\n") . BS.take 100)
 		. catMaybes $ showResponse res'
+	lift $ hlDebug sv "critical" "\n"
 	return cnt
 
 httpContent :: HandleLike h => Maybe Int -> ClientM h BS.ByteString
