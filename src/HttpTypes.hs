@@ -424,6 +424,7 @@ parseResponseLine src = case BSC.span (/= ' ') src of
 parseStatusCode :: BS.ByteString -> StatusCode
 parseStatusCode sc
 	| ("200", _) <- BSC.span (not . isSpace) sc = OK
+	| ("302", _) <- BSC.span (not . isSpace) sc = Found
 parseStatusCode sc = error $ "parseStatusCode: bad status code: " ++ BSC.unpack sc
 
 showResponse :: Response -> [Maybe BS.ByteString]
@@ -446,12 +447,13 @@ showResponse r =
 		Just $ responseBody r
 	 ]
 
-data StatusCode = Continue | SwitchingProtocols | OK deriving Show
+data StatusCode = Continue | SwitchingProtocols | OK | Found deriving Show
 
 showStatusCode :: StatusCode -> BS.ByteString
 showStatusCode Continue = "100 Continue"
 showStatusCode SwitchingProtocols = "101 SwitchingProtocols"
 showStatusCode OK = "200 OK"
+showStatusCode Found = "302 Found"
 
 data ContentLength = ContentLength Int deriving Show
 
