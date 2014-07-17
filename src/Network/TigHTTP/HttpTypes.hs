@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, QuasiQuotes #-}
 
 module Network.TigHTTP.HttpTypes (
 	Version(..),
@@ -9,7 +9,7 @@ module Network.TigHTTP.HttpTypes (
 	ContentType(..),
 	TransferEncoding(..),
 
-	parse, parseResponse, showRequest, showResponse, (+++),
+	parseReq, parseResponse, showRequest, showResponse, (+++),
 	myLast, requestBodyLength, postAddBody, getPostBody,
 
 	Post(..),
@@ -134,8 +134,8 @@ showVersion :: Version -> BS.ByteString
 showVersion (Version vmjr vmnr) =
 	"HTTP/" +++ BSC.pack (show vmjr) +++ "." +++ BSC.pack (show vmnr)
 
-parse :: [BS.ByteString] -> Request
-parse (h : t) = let
+parseReq :: [BS.ByteString] -> Request
+parseReq (h : t) = let
 	(rt, uri, v) = parseRequestLine h in
 	parseSep rt uri v $ map separate t
 	where
@@ -143,7 +143,7 @@ parse (h : t) = let
 		case BS.splitAt 2 csv of
 			(": ", v) -> (k, v)
 			_ -> error "parse: bad"
-parse [] = error "parse: bad request"
+parseReq [] = error "parse: bad request"
 
 parseSep :: RequestType -> Uri -> Version -> [(BS.ByteString, BS.ByteString)] -> Request
 parseSep RequestTypeGet uri v kvs = RequestGet uri v $ parseGet kvs

@@ -30,8 +30,8 @@ httpGet = gets fst >>= \sv -> do
 	lift . hlPutStrLn sv . request =<< gets snd
 	src <- lift $ hGetHeader sv
 	let res = parseResponse src
-	lift . hlDebug sv "critical" . BSC.pack . (++ "\n\n")
-		. show $ responseTransferEncoding res
+--	lift . hlDebug sv "critical" . BSC.pack . (++ "\n\n")
+--		. show $ responseTransferEncoding res
 	cnt <- httpContent $ contentLength <$> responseContentLength res
 	let res' = res { responseBody = cnt }
 	lift . mapM_ (hlDebug sv "critical" . (`BS.append` "\n") . BS.take 100)
@@ -46,7 +46,7 @@ httpContent _ = getChunked
 getChunked :: HandleLike h => ClientM h BS.ByteString
 getChunked = gets fst >>= \h -> do
 	(n :: Int) <- lift $ (fst . head . readHex . BSC.unpack) `liftM` hlGetLine h
-	lift . hlDebug h "critical" . BSC.pack . (++ "\n") $ show n
+--	lift . hlDebug h "critical" . BSC.pack . (++ "\n") $ show n
 	case n of
 		0 -> return ""
 		_ -> do	r <- lift $ hlGet h n

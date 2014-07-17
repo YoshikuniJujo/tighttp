@@ -18,7 +18,7 @@ import Numeric
 httpServer :: HandleLike h => h -> LBS.ByteString -> HandleMonad h BS.ByteString
 httpServer cl cnt = do
 	h <- hlGetHeader cl
-	let req = parse h
+	let req = parseReq h
 	b <- case req of
 		RequestPost _ _ _ -> httpContent cl $ requestBodyLength req -- hlGet cl $ maybe 10 id $ requestBodyLength req
 		_ -> return ""
