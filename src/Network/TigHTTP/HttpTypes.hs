@@ -107,6 +107,7 @@ data Post = Post {
 	postCacheControl :: Maybe [CacheControl],
 	postContentType :: Maybe ContentType,
 	postContentLength :: Maybe ContentLength,
+	postTransferEncoding :: Maybe TransferEncoding,
 	postOthers :: [(BS.ByteString, BS.ByteString)],
 	postBody :: BS.ByteString
  } deriving Show
@@ -197,6 +198,10 @@ parsePost kvs = Post {
 	postContentType = parseContentType <$> lookup "Content-Type" kvs,
 	postContentLength = ContentLength . read . BSC.unpack <$>
 		lookup "Content-Length" kvs,
+	postTransferEncoding = case lookup "Transfer-Encoding" kvs of
+		Just "chunked" -> Just Chunked
+		Nothing -> Nothing
+		_ -> error "bad Transfer-Encoding",
 	postOthers = filter ((`notElem` postKeys) . fst) kvs,
 	postBody = ""
  }
@@ -204,7 +209,8 @@ parsePost kvs = Post {
 postKeys :: [BS.ByteString]
 postKeys = [
 	"Host", "User-Agent", "Accept", "Accept-Language", "Accept-Encoding",
-	"Connection", "Cache-Control", "Content-Type", "Content-Length"
+	"Connection", "Cache-Control", "Content-Type", "Content-Length",
+	"Transfer-Encoding"
  ]
 
 sepTkn :: BS.ByteString -> [BS.ByteString]

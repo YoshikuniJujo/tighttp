@@ -105,7 +105,8 @@ post hnpn cnt = RequestPost (Uri "/") (Version 1 1) $
 		postConnection = Just [Connection "keep-alive"],
 		postCacheControl = Just [MaxAge 0],
 		postContentType = Just $ ContentType ("text", "plain"),
-		postContentLength = Just . ContentLength $ BS.length cnt,
+		postContentLength = Nothing, --Just . ContentLength $ BS.length cnt,
+		postTransferEncoding = Just Chunked,
 		postOthers = [],
 		postBody = cnt
 	 }
