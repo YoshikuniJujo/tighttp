@@ -426,6 +426,7 @@ parseStatusCode sc
 	| ("200", _) <- BSC.span (not . isSpace) sc = OK
 	| ("301", _) <- BSC.span (not . isSpace) sc = MovedPermanently
 	| ("302", _) <- BSC.span (not . isSpace) sc = Found
+	| ("400", _) <- BSC.span (not . isSpace) sc = BadRequest
 parseStatusCode sc = error $ "parseStatusCode: bad status code: " ++ BSC.unpack sc
 
 showResponse :: Response -> [Maybe BS.ByteString]
@@ -454,6 +455,7 @@ data StatusCode
 	| OK
 	| MovedPermanently
 	| Found
+	| BadRequest
 	deriving Show
 
 showStatusCode :: StatusCode -> BS.ByteString
@@ -462,6 +464,7 @@ showStatusCode SwitchingProtocols = "101 SwitchingProtocols"
 showStatusCode OK = "200 OK"
 showStatusCode MovedPermanently = "301 Moved Permanently"
 showStatusCode Found = "302 Found"
+showStatusCode BadRequest = "400 Bad Request"
 
 data ContentLength = ContentLength Int deriving Show
 

@@ -4,9 +4,11 @@ import Control.Applicative
 import "monads-tf" Control.Monad.Trans
 import System.Environment
 import Network
-import qualified Network.PeyoTLS.Client as P
 import Network.PeyoTLS.ReadFile
 import "crypto-random" Crypto.Random
+
+import qualified Data.ByteString.Char8 as BSC
+import qualified Network.PeyoTLS.Client as P
 
 import Network.TigHTTP.Client
 
@@ -23,4 +25,6 @@ main = do
 	g <- cprgCreate <$> createEntropyPool :: IO SystemRNG
 	(`P.run` g) $ do
 		t <- P.open sv ["TLS_RSA_WITH_AES_128_CBC_SHA"] [] ca
-		httpGet t >>= liftIO . print
+		run t $ do
+			setHost (BSC.pack addr) 443
+			httpGet >>= liftIO . print

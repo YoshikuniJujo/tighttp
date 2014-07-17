@@ -4,7 +4,7 @@ import Control.Applicative
 import "monads-tf" Control.Monad.Trans
 import System.Environment
 import Network
-import Network.PeyoTLS.Client
+import qualified Network.PeyoTLS.Client as P
 import Network.PeyoTLS.ReadFile
 import "crypto-random" Crypto.Random
 
@@ -19,6 +19,6 @@ main = do
 		"/etc/ssl/certs/GeoTrust_Global_CA.pem" ]
 	sv <- connectTo addr (PortNumber $ fromIntegral pn)
 	g <- cprgCreate <$> createEntropyPool :: IO SystemRNG
-	(`run` g) $ do
-		t <- open sv ["TLS_RSA_WITH_AES_128_CBC_SHA"] [] ca
+	(`P.run` g) $ do
+		t <- P.open sv ["TLS_RSA_WITH_AES_128_CBC_SHA"] [] ca
 		httpPost t "I am client.\n" >>= liftIO . print

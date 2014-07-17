@@ -1,8 +1,12 @@
-{-# LANGUAGE ScopedTypeVariables, OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables, OverloadedStrings, PackageImports #-}
 
-module Network.TigHTTP.Client (httpGet, httpPost) where
+module Network.TigHTTP.Client (
+	run, setHost, httpGet, httpGet', httpPost) where
 
+import Control.Applicative
+import Control.Arrow hiding ((+++))
 import Control.Monad
+import "monads-tf" Control.Monad.State
 import Data.Maybe
 
 import Network.TigHTTP.HttpTypes
@@ -10,14 +14,26 @@ import Data.HandleLike
 
 import qualified Data.ByteString as BS
 
-httpGet :: HandleLike h => h -> HandleMonad h BS.ByteString
-httpGet sv = do
-	hlPutStrLn sv request
-	src <- hGetHeader sv
+type ClientM h = StateT (h, Maybe (BS.ByteString, Int)) (HandleMonad h)
+
+httpGet' :: HandleLike h => h -> HandleMonad h BS.ByteString
+httpGet' sv = httpGet `evalStateT` (sv, Nothing)
+
+run :: HandleLike h => h -> ClientM h a -> HandleMonad h a
+run h = (`evalStateT` (h, Nothing))
+
+setHost :: HandleLike h => BS.ByteString -> Int -> ClientM h ()
+setHost hn pn = modify $ second $ const $ Just (hn, pn)
+
+httpGet :: HandleLike h => ClientM h BS.ByteString
+httpGet = gets fst >>= \sv -> do
+--	modify . second $ const ("www.google.co.jp", 443)
+	lift . hlPutStrLn sv . request =<< gets snd
+	src <- lift $ hGetHeader sv
 	let res = parseResponse src
-	cnt <- hlGet sv $ maybe 10 contentLength $ responseContentLength res
+	cnt <- lift $ hlGet sv $ maybe 10 contentLength $ responseContentLength res
 	let res' = res { responseBody = cnt }
-	mapM_ (hlDebug sv "critical" . (`BS.append` "\n"))
+	lift . mapM_ (hlDebug sv "critical" . (`BS.append` "\n"))
 		. catMaybes $ showResponse res'
 	return cnt
 
@@ -38,10 +54,11 @@ hGetHeader h = do
 crlf :: [BS.ByteString] -> BS.ByteString
 crlf = BS.concat . map (+++ "\r\n")
 
-request :: BS.ByteString
-request = crlf . catMaybes . showRequest . RequestGet (Uri "/") (Version 1 1) $
+request :: Maybe (BS.ByteString, Int) -> BS.ByteString
+request hnpn = crlf . catMaybes . showRequest . RequestGet (Uri "/") (Version 1 1) $
 	Get {
-		getHost = Just . Host "www.google.co.jp" $ Just 443,
+		getHost = uncurry Host . second Just <$> hnpn,
+--		getHost = Just . Host "www.google.co.jp" $ Just 443,
 --		getHost = Just . Host "www.facebook.com" $ Just 443,
 		getUserAgent = Just [Product "Mozilla" (Just "5.0")],
 		getAccept = Just [Accept ("text", "plain") (Qvalue 1.0)],
