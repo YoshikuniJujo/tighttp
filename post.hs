@@ -5,6 +5,7 @@ import System.Environment
 import Network
 
 import qualified Data.ByteString.Char8 as BSC
+import qualified Data.ByteString.Lazy as LBS
 
 import Network.TigHTTP.Client
 
@@ -15,4 +16,5 @@ main = do
 	sv <- connectTo addr (PortNumber $ fromIntegral pn)
 	run sv $ do
 		setHost (BSC.pack addr) pn
-		httpPost "I am client.\n" >>= liftIO . print
+		httpPost (LBS.fromChunks ["I am client.\n", "You are server.\n"])
+			>>= liftIO . print

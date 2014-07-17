@@ -19,7 +19,9 @@ httpServer :: HandleLike h => h -> LBS.ByteString -> HandleMonad h BS.ByteString
 httpServer cl cnt = do
 	h <- hlGetHeader cl
 	let req = parse h
-	b <- hlGet cl $ maybe 0 id $ requestBodyLength req
+	b <- case req of
+		RequestPost _ _ _ -> httpContent cl $ requestBodyLength req -- hlGet cl $ maybe 10 id $ requestBodyLength req
+		_ -> return ""
 	let req' = postAddBody req b
 	hlDebug cl "critical" . BSC.pack . (++ "\n") $ show req'
 	mapM_ (hlDebug cl "critical" . (`BS.append` "\n")) .
@@ -27,6 +29,20 @@ httpServer cl cnt = do
 	hlPutStrLn cl . crlf . catMaybes . showResponse . mkContents . mkChunked
 		$ LBS.toChunks cnt
 	return $ getPostBody req'
+
+httpContent :: HandleLike h => h -> Maybe Int -> HandleMonad h BS.ByteString
+httpContent h (Just n) = hlGet h n
+httpContent h _ = getChunked h
+
+getChunked :: HandleLike h => h -> HandleMonad h BS.ByteString
+getChunked h = do
+	(n :: Int) <- (fst . head . readHex . BSC.unpack) `liftM` hlGetLine h
+	hlDebug h "critical" . BSC.pack . (++ "\n") $ show n
+	case n of
+		0 -> return ""
+		_ -> do	r <- hlGet h n
+			"" <- hlGetLine h
+			(r `BS.append`) `liftM` getChunked h
 
 mkChunked :: [BS.ByteString] -> BS.ByteString
 mkChunked [] = "0" `BS.append` "\r\n\r\n"
