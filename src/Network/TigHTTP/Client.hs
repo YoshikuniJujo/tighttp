@@ -13,6 +13,7 @@ import Network.TigHTTP.HttpTypes
 import Data.HandleLike
 
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Char8 as BSC
 
 type ClientM h = StateT (h, Maybe (BS.ByteString, Int)) (HandleMonad h)
 
@@ -27,6 +28,8 @@ httpGet = gets fst >>= \sv -> do
 	lift . hlPutStrLn sv . request =<< gets snd
 	src <- lift $ hGetHeader sv
 	let res = parseResponse src
+	lift . hlDebug sv "critical" . BSC.pack . (++ "\n\n")
+		. show $ responseTransferEncoding res
 	cnt <- lift $ hlGet sv $ maybe 10 contentLength $ responseContentLength res
 	let res' = res { responseBody = cnt }
 	lift . mapM_ (hlDebug sv "critical" . (`BS.append` "\n"))

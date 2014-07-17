@@ -366,6 +366,7 @@ data Response = Response {
 	responseStatusCode :: StatusCode,
 	responseDate :: Maybe UTCTime,
 	responseContentLength :: Maybe ContentLength,
+	responseTransferEncoding :: Maybe TransferEncoding,
 	responseContentType :: ContentType,
 	responseServer :: Maybe [Product],
 	responseLastModified :: Maybe UTCTime,
@@ -395,6 +396,10 @@ parseResponseSep v sc kvs = Response {
 		BSC.unpack . initN 4 <$> lookup "Date" kvs,
 	responseContentLength = ContentLength . read . BSC.unpack <$>
 		lookup "Content-Length" kvs,
+	responseTransferEncoding = case lookup "Transfer-Encoding" kvs of
+		Just "chunked" -> Just Chunked
+		Nothing -> Nothing
+		_ -> error "bad Transfer-Encoding",
 	responseContentType = parseContentType . fromJust $
 		lookup "Content-Type" kvs,
 	responseServer = map parseProduct . sepTkn <$> lookup "Server" kvs,
@@ -410,7 +415,7 @@ parseResponseSep v sc kvs = Response {
 responseKeys :: [BS.ByteString]
 responseKeys = [
 	"Date", "Content-Length", "Content-Type", "Server", "Last-Modified",
-	"ETag", "Accept-Ranges", "Connection" ]
+	"ETag", "Accept-Ranges", "Connection", "Transfer-Encoding" ]
 
 initN :: Int -> BS.ByteString -> BS.ByteString
 initN n lst = BS.take (BS.length lst - n) lst
@@ -436,6 +441,8 @@ showResponse r =
 		Just $ "Date: " +++ maybe "" showTime (responseDate r),
 		Just $ "Content-Length: " +++ maybe ""
 			showContentLength (responseContentLength r),
+		("Transfer-Encoding: " +++) . showTransferEncoding <$>
+			responseTransferEncoding r,
 		Just $ "Content-Type: " +++
 			showContentType (responseContentType r),
 		("Server: " +++) . BSC.unwords . map showProduct <$> responseServer r,
@@ -473,6 +480,11 @@ showContentLength (ContentLength n) = BSC.pack $ show n
 
 contentLength :: ContentLength -> Int
 contentLength (ContentLength n) = n
+
+data TransferEncoding = Chunked deriving Show
+
+showTransferEncoding :: TransferEncoding -> BS.ByteString
+showTransferEncoding Chunked = "chunked"
 
 data ContentType = ContentType (BS.ByteString, BS.ByteString) deriving Show
 
