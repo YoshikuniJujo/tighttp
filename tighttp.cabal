@@ -3,6 +3,27 @@ cabal-version:	>= 1.8
 
 name:		tighttp
 version:	0.0.0.0
+stability:	Experimental
+author:		Yoshikuni Jujo <PAF01143@nifty.ne.jp>
+maintainer:	Yoshikuni Jujo <PAF01143@nifty.ne.jp>
+homepage:	https://github.com/YoshikuniJujo/tighttp/wiki
+
+license:	BSD3
+license-file:	LICENSE
+
+category:	Network
+Synopsis:	Tiny and Incrementally-Growing HTTP library
+description:
+    Comming soon.
+
+source-repository	head
+    type:	git
+    location:	git://github.com/YoshikuniJujo/tighttp.git
+
+source-repository	this
+    type:	git
+    location:	git://github.com/YoshikuniJujo/tighttp.git
+    tag:	tighttp-0.0.0.0
 
 library
     hs-source-dirs:	src
