@@ -10,6 +10,8 @@ import "crypto-random" Crypto.Random
 
 import Network.TigHTTP.Client
 
+import qualified Data.ByteString.Char8 as BSC
+
 main :: IO ()
 main = do
 	addr : spn : _ <- getArgs
@@ -21,4 +23,6 @@ main = do
 	g <- cprgCreate <$> createEntropyPool :: IO SystemRNG
 	(`P.run` g) $ do
 		t <- P.open sv ["TLS_RSA_WITH_AES_128_CBC_SHA"] [] ca
-		httpPost t "I am client.\n" >>= liftIO . print
+		run t $ do
+			setHost (BSC.pack addr) pn
+			httpPost "I am client.\n" >>= liftIO . print
