@@ -57,7 +57,7 @@ mkContents cnt = Response {
 		"%a, %d %b %Y %H:%M:%S" "Wed, 07 May 2014 02:27:34",
 	responseContentLength = Nothing, -- Just $ ContentLength $ BS.length cnt,
 	responseTransferEncoding = Just Chunked,
-	responseContentType = ContentType "text" "plain",
+	responseContentType = ContentType "text" "plain" [],
 	responseServer = Nothing,
 	responseLastModified = Nothing,
 	responseETag = Nothing,
