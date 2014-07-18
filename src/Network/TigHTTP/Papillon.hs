@@ -16,9 +16,18 @@ import qualified Data.ByteString.Char8 as BSC
 
 import Network.TigHTTP.Token
 
-data ContentType = ContentType Type Subtype
-	[(BS.ByteString, BS.ByteString)]
-	deriving Show
+data ContentType = ContentType Type Subtype [Parameter] deriving Show
+
+parseContentType :: BS.ByteString -> ContentType
+parseContentType ct = case runError . contentType $ parse ct of
+	Left _ -> error "parseContentType"
+	Right (r, _) -> r
+
+showContentType :: ContentType -> BS.ByteString
+showContentType (ContentType t st ps) = showType t
+	`BS.append` "/"
+	`BS.append` showSubtype st
+	`BS.append` showParameters ps
 
 data Type
 	= Type BS.ByteString
@@ -49,21 +58,31 @@ showSubtype Plain = "plain"
 showSubtype Html = "html"
 showSubtype (Subtype s) = s
 
-parseContentType :: BS.ByteString -> ContentType
-parseContentType ct = case runError . contentType $ parse ct of
-	Left _ -> error "parseContentType"
-	Right (r, _) -> r
+data Parameter
+	= Charset Charset
+	| Parameter BS.ByteString BS.ByteString
+	deriving Show
 
-showContentType :: ContentType -> BS.ByteString
-showContentType (ContentType t st ps) = showType t
-	`BS.append` "/"
-	`BS.append` showSubtype st
-	`BS.append` showParameters ps
+mkParameter :: BS.ByteString -> BS.ByteString -> Parameter
+mkParameter "charset" "UTF-8" = Charset Utf8
+mkParameter "charset" v = Charset $ CharsetRaw v
+mkParameter a v = Parameter a v
 
-showParameters :: [(BS.ByteString, BS.ByteString)] -> BS.ByteString
+showParameters :: [Parameter] -> BS.ByteString
 showParameters [] = ""
-showParameters ((a, v) : ps) = "; " `BS.append` a `BS.append` "=" `BS.append` v
-	`BS.append` showParameters ps
+showParameters (Charset v : ps) = "; " `BS.append` "charset"
+	`BS.append` "=" `BS.append` showCharset v `BS.append` showParameters ps
+showParameters (Parameter a v : ps) = "; " `BS.append` a
+	`BS.append` "=" `BS.append` v `BS.append` showParameters ps
+
+data Charset
+	= Utf8
+	| CharsetRaw BS.ByteString
+	deriving Show
+
+showCharset :: Charset -> BS.ByteString
+showCharset Utf8 = "UTF-8"
+showCharset (CharsetRaw cs) = cs
 
 bsconcat :: [ByteString] -> ByteString
 bsconcat = BS.concat
@@ -96,8 +115,8 @@ text :: ByteString
 qdtext :: ByteString
 	= ts:(cs:<isQdtextChar>+ { cs } / _:lws { " " })+	{ pack $ concat ts }
 
-parameter :: (ByteString, ByteString)
-	= a:attribute '=' v:value				{ (a, v) }
+parameter :: Parameter
+	= a:attribute '=' v:value				{ mkParameter a v }
 
 attribute :: ByteString = t:token				{ t }
 
