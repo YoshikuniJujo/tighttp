@@ -23,6 +23,8 @@ import qualified Data.ByteString.Char8 as BSC
 import Data.Time
 import System.Locale
 
+import Network.TigHTTP.Papillon
+
 (+++) :: BS.ByteString -> BS.ByteString -> BS.ByteString
 (+++) = BS.append
 
@@ -492,17 +494,6 @@ data TransferEncoding = Chunked deriving Show
 
 showTransferEncoding :: TransferEncoding -> BS.ByteString
 showTransferEncoding Chunked = "chunked"
-
-data ContentType = ContentType (BS.ByteString, BS.ByteString) deriving Show
-
-parseContentType :: BS.ByteString -> ContentType
-parseContentType ct = case BSC.span (/= '/') ct of
-	(t, sst) -> case BSC.uncons sst of
-		Just ('/', st) -> ContentType (t, st)
-		_ -> error "parseContentType: bad Content-Type"
-
-showContentType :: ContentType -> BS.ByteString
-showContentType (ContentType (t, st)) = t +++ "/" +++ st
 
 showTime :: UTCTime -> BS.ByteString
 showTime = BSC.pack . formatTime defaultTimeLocale "%a, %d %b %Y %H:%M:%S GMT"

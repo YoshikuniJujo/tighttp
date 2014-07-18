@@ -28,9 +28,10 @@ source-repository	this
 library
     hs-source-dirs:	src
     exposed-modules:	Network.TigHTTP.Client, Network.TigHTTP.Server
-    other-modules:	Network.TigHTTP.HttpTypes
+    other-modules:	Network.TigHTTP.HttpTypes, Network.TigHTTP.Papillon
     build-depends:
         base == 4.*, bytestring == 0.10.*, handle-like == 0.1.*,
-        old-locale == 1.0.*, time == 1.4.*, monads-tf == 0.1.*
+        old-locale == 1.0.*, time == 1.4.*, monads-tf == 0.1.*,
+        papillon == 0.0.88
     ghc-options:	-Wall
     extensions:		PatternGuards
