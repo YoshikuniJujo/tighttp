@@ -15,7 +15,8 @@ import Data.HandleLike
 
 import Numeric
 
-httpServer :: HandleLike h => h -> LBS.ByteString -> HandleMonad h BS.ByteString
+httpServer :: HandleLike h =>
+	h -> LBS.ByteString -> HandleMonad h (Maybe ContentType, BS.ByteString)
 httpServer cl cnt = do
 	h <- hlGetHeader cl
 	let req = parseReq h
@@ -28,7 +29,9 @@ httpServer cl cnt = do
 		catMaybes . showRequest $ req'
 	hlPutStrLn cl . crlf . catMaybes . showResponse . mkContents . mkChunked
 		$ LBS.toChunks cnt
-	return $ getPostBody req'
+	case req' of
+		RequestPost _ _ p -> return (postContentType p, getPostBody req')
+		_ -> return (Nothing, getPostBody req')
 
 httpContent :: HandleLike h => h -> Maybe Int -> HandleMonad h BS.ByteString
 httpContent h (Just n) = hlGet h n
