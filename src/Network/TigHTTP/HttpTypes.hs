@@ -6,7 +6,7 @@ module Network.TigHTTP.HttpTypes (
 	Accept(..), AcceptLanguage(..), Qvalue(..),
 	Host(..), Product(..), Connection(..),
 	Response(..), StatusCode(..), ContentLength(..), contentLength,
-	ContentType(..),
+	ContentType(..), Type(..), Subtype(..),
 	TransferEncoding(..),
 
 	parseReq, parseResponse, showRequest, showResponse, (+++),

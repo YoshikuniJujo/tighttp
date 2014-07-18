@@ -2,24 +2,52 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Network.TigHTTP.Papillon (
-	ContentType(..), parseContentType, showContentType,
+	ContentType(..), Type(..), Subtype(..),
+		parseContentType, showContentType,
 ) where
 
 import Data.Char
 import Text.Papillon
 
-import Data.ByteString (ByteString, append)
+import Data.ByteString (ByteString)
 import Data.ByteString.Char8 (pack)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 
 import Network.TigHTTP.Token
 
-data ContentType = ContentType
-	BS.ByteString
-	BS.ByteString
+data ContentType = ContentType Type Subtype
 	[(BS.ByteString, BS.ByteString)]
 	deriving Show
+
+data Type
+	= Type BS.ByteString
+	| Text
+	deriving Show
+
+mkType :: BS.ByteString -> Type
+mkType "text" = Text
+mkType t = Type t
+
+showType :: Type -> BS.ByteString
+showType Text = "text"
+showType (Type t) = t
+
+data Subtype
+	= Subtype BS.ByteString
+	| Plain
+	| Html
+	deriving Show
+
+mkSubtype :: BS.ByteString -> Subtype
+mkSubtype "html" = Html
+mkSubtype "plain" = Plain
+mkSubtype s = Subtype s
+
+showSubtype :: Subtype -> BS.ByteString
+showSubtype Plain = "plain"
+showSubtype Html = "html"
+showSubtype (Subtype s) = s
 
 parseContentType :: BS.ByteString -> ContentType
 parseContentType ct = case runError . contentType $ parse ct of
@@ -27,7 +55,9 @@ parseContentType ct = case runError . contentType $ parse ct of
 	Right (r, _) -> r
 
 showContentType :: ContentType -> BS.ByteString
-showContentType (ContentType t st ps) = t `BS.append` "/" `BS.append` st
+showContentType (ContentType t st ps) = showType t
+	`BS.append` "/"
+	`BS.append` showSubtype st
 	`BS.append` showParameters ps
 
 showParameters :: [(BS.ByteString, BS.ByteString)] -> BS.ByteString
@@ -35,11 +65,7 @@ showParameters [] = ""
 showParameters ((a, v) : ps) = "; " `BS.append` a `BS.append` "=" `BS.append` v
 	`BS.append` showParameters ps
 
-testQuoted :: BS.ByteString -> BS.ByteString
-testQuoted bs = case runError . quotedString $ parse bs of
-	Left _ -> error "testQuoted"
-	Right (r, _) -> r
-
+bsconcat :: [ByteString] -> ByteString
 bsconcat = BS.concat
 
 [papillon|
@@ -48,13 +74,10 @@ source: ByteString
 
 contentType :: ContentType
 	= c:token '/' sc:token ps:(';' ' '* p:parameter { p })*
-						{ ContentType c sc ps }
+	{ ContentType (mkType c) (mkSubtype sc) ps }
 
 token :: ByteString
 	= t:<isTokenChar>+			{ pack t }
-
-rst :: ByteString
-	= r:<(/= '\n')>*			{ pack r }
 
 quotedString :: ByteString
 	= '"' t:(qt:qdtext { qt } / qp:quotedPair { pack [qp] })* '"'
