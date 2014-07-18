@@ -27,4 +27,4 @@ main = do
 		t <- P.open sv ["TLS_RSA_WITH_AES_128_CBC_SHA"] [] ca
 		run t $ do
 			setHost (BSC.pack addr) 443
-			httpGet >>= liftIO . print
+			httpGet >>= liftIO . putStrLn . (++ "...") . take 100 . show

@@ -25,7 +25,7 @@ run h = (`evalStateT` (h, Nothing))
 setHost :: HandleLike h => BS.ByteString -> Int -> ClientM h ()
 setHost hn pn = modify $ second $ const $ Just (hn, pn)
 
-httpGet :: HandleLike h => ClientM h BS.ByteString
+httpGet :: HandleLike h => ClientM h (ContentType, BS.ByteString)
 httpGet = gets fst >>= \sv -> do
 	lift . hlPutStrLn sv . request =<< gets snd
 	src <- lift $ hGetHeader sv
@@ -37,7 +37,7 @@ httpGet = gets fst >>= \sv -> do
 	lift . mapM_ (hlDebug sv "critical" . (`BS.append` "\n") . BS.take 100)
 		. catMaybes $ showResponse res'
 	lift $ hlDebug sv "critical" "\n"
-	return cnt
+	return (responseContentType res', responseBody res')
 
 httpContent :: HandleLike h => Maybe Int -> ClientM h BS.ByteString
 httpContent (Just n) = gets fst >>= lift . flip hlGet n
