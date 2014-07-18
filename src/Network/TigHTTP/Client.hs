@@ -1,7 +1,9 @@
 {-# LANGUAGE ScopedTypeVariables, OverloadedStrings, PackageImports #-}
 
 module Network.TigHTTP.Client (
-	ClientM, run, setHost, httpGet, httpPost) where
+	ClientM, run, setHost, httpGet, httpPost,
+	ContentType(..), Type(..), Subtype(..), Parameter(..), Charset(..),
+	) where
 
 import Control.Applicative
 import Control.Arrow hiding ((+++))
@@ -105,8 +107,7 @@ post hnpn cnt = RequestPost (Uri "/") (Version 1 1) $
 		postAcceptEncoding = Just [],
 		postConnection = Just [Connection "keep-alive"],
 		postCacheControl = Just [MaxAge 0],
-		postContentType = Just $ ContentType
-			(Type "text") (Subtype "plain") [],
+		postContentType = Just $ ContentType Text Plain [],
 		postContentLength = Nothing, --Just . ContentLength $ BS.length cnt,
 		postTransferEncoding = Just Chunked,
 		postOthers = [],

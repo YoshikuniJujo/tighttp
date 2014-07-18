@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Network.TigHTTP.Papillon (
-	ContentType(..), Type(..), Subtype(..),
+	ContentType(..), Type(..), Subtype(..), Parameter(..), Charset(..),
 		parseContentType, showContentType,
 ) where
 
@@ -30,49 +30,49 @@ showContentType (ContentType t st ps) = showType t
 	`BS.append` showParameters ps
 
 data Type
-	= Type BS.ByteString
-	| Text
+	= Text
+	| TypeRaw BS.ByteString
 	deriving Show
 
 mkType :: BS.ByteString -> Type
 mkType "text" = Text
-mkType t = Type t
+mkType t = TypeRaw t
 
 showType :: Type -> BS.ByteString
 showType Text = "text"
-showType (Type t) = t
+showType (TypeRaw t) = t
 
 data Subtype
-	= Subtype BS.ByteString
-	| Plain
+	= Plain
 	| Html
+	| SubtypeRaw BS.ByteString
 	deriving Show
 
 mkSubtype :: BS.ByteString -> Subtype
 mkSubtype "html" = Html
 mkSubtype "plain" = Plain
-mkSubtype s = Subtype s
+mkSubtype s = SubtypeRaw s
 
 showSubtype :: Subtype -> BS.ByteString
 showSubtype Plain = "plain"
 showSubtype Html = "html"
-showSubtype (Subtype s) = s
+showSubtype (SubtypeRaw s) = s
 
 data Parameter
 	= Charset Charset
-	| Parameter BS.ByteString BS.ByteString
+	| ParameterRaw BS.ByteString BS.ByteString
 	deriving Show
 
 mkParameter :: BS.ByteString -> BS.ByteString -> Parameter
 mkParameter "charset" "UTF-8" = Charset Utf8
 mkParameter "charset" v = Charset $ CharsetRaw v
-mkParameter a v = Parameter a v
+mkParameter a v = ParameterRaw a v
 
 showParameters :: [Parameter] -> BS.ByteString
 showParameters [] = ""
 showParameters (Charset v : ps) = "; " `BS.append` "charset"
 	`BS.append` "=" `BS.append` showCharset v `BS.append` showParameters ps
-showParameters (Parameter a v : ps) = "; " `BS.append` a
+showParameters (ParameterRaw a v : ps) = "; " `BS.append` a
 	`BS.append` "=" `BS.append` v `BS.append` showParameters ps
 
 data Charset

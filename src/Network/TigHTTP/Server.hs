@@ -1,6 +1,9 @@
 {-# LANGUAGE ScopedTypeVariables, OverloadedStrings, PackageImports #-}
 
-module Network.TigHTTP.Server (httpServer) where
+module Network.TigHTTP.Server (
+	httpServer,
+	ContentType(..), Type(..), Subtype(..), Parameter(..), Charset(..),
+	) where
 
 import Control.Monad
 import Data.Maybe
