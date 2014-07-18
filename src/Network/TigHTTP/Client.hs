@@ -53,7 +53,7 @@ getChunked = gets fst >>= \h -> do
 			"" <- lift $ hlGetLine h
 			(r `BS.append`) `liftM` getChunked
 
-httpPost :: HandleLike h => LBS.ByteString -> ClientM h BS.ByteString
+httpPost :: HandleLike h => LBS.ByteString -> ClientM h (ContentType, BS.ByteString)
 httpPost cnt = gets fst >>= \sv -> do
 	let pst = mkChunked $ LBS.toChunks cnt
 	lift . hlPutStrLn sv . requestToString . flip post pst =<< gets snd
@@ -61,7 +61,7 @@ httpPost cnt = gets fst >>= \sv -> do
 	cnt' <- httpContent $ contentLength <$> responseContentLength res
 	let res' = res { responseBody = cnt' }
 	lift . hlDebug sv "critical" . (`BS.append` "\n") $ responseToString res'
-	return cnt'
+	return (responseContentType res', responseBody res')
 
 mkChunked :: [BS.ByteString] -> BS.ByteString
 mkChunked [] = "0" `BS.append` "\r\n\r\n"
