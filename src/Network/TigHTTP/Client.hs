@@ -29,20 +29,13 @@ run h = (`evalStateT` (h, Nothing))
 setHost :: HandleLike h => BS.ByteString -> Int -> ClientM h ()
 setHost hn pn = modify $ second $ const $ Just (hn, pn)
 
-httpGet :: HandleLike h => ClientM h BS.ByteString
+httpGet :: HandleLike h => ClientM h (Pipe () BS.ByteString (ClientM h) ())
 -- httpGet = (BS.concat . fromJust) `liftM` runPipe (httpGet_ =$= toList)
-httpGet = do
+httpGet = httpGet__
+{-
 	p <- httpGet__
 	(BS.concat . fromJust) `liftM` runPipe (p =$= toList)
-
-httpGet_ :: HandleLike h => Pipe () BS.ByteString (ClientM h) ()
-httpGet_ = lift (gets fst) >>= \sv -> do
-	lift . lift . hlPutStrLn sv . request =<< lift (gets snd)
-	src <- lift . lift $ hGetHeader sv
-	let res = parseResponse src
-	lift . lift . mapM_ (hlDebug sv "critical" . (`BS.append` "\n") . BS.take 100)
-		. catMaybes $ showResponse res
-	httpContent_ $ contentLength <$> responseContentLength res
+	-}
 
 httpGet__ :: HandleLike h => ClientM h (Pipe () BS.ByteString (ClientM h) ())
 httpGet__ = gets fst >>= \sv -> do

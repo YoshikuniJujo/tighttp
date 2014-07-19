@@ -1,12 +1,17 @@
 {-# LANGUAGE ScopedTypeVariables, OverloadedStrings, PackageImports #-}
 
 import Control.Applicative
+-- import Control.Monad
 import "monads-tf" Control.Monad.Trans
+-- import Data.Maybe
+import Data.Pipe
+-- import Data.Pipe.List
 import System.Environment
 import Network
 import Network.PeyoTLS.ReadFile
 import "crypto-random" Crypto.Random
 
+-- import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import qualified Network.PeyoTLS.Client as P
 
@@ -20,12 +25,25 @@ main = do
 	ca <- readCertificateStore [
 		"cacert.sample_pem",
 		"/etc/ssl/certs/GeoTrust_Global_CA.pem",
-		"/etc/ssl/certs/DigiCert_High_Assurance_EV_Root_CA.pem" ]
+		"/etc/ssl/certs/DigiCert_High_Assurance_EV_Root_CA.pem",
+		"/etc/ssl/certs/GlobalSign_Root_CA.pem" ]
 	sv <- connectTo addr (PortNumber $ fromIntegral pn)
 	g <- cprgCreate <$> createEntropyPool :: IO SystemRNG
 	(`P.run` g) $ do
 		t <- P.open sv ["TLS_RSA_WITH_AES_128_CBC_SHA"] [] ca
 		run t $ do
 			setHost (BSC.pack addr) 443
-			httpGet >>= liftIO . putStrLn . (++ "...") . take 100 . show
---			httpGet >>= liftIO . putStrLn . show
+			p <- httpGet
+			_ <- runPipe $ p =$= printP
+			return ()
+			{-
+			(BS.concat . fromJust) `liftM` runPipe (p =$= toList)
+				>>= liftIO . putStrLn . (++ "...") . take 100 . show
+				-}
+
+printP :: MonadIO m => Pipe BSC.ByteString () m ()
+printP = do
+	ms <- await
+	case ms of
+		Just s -> liftIO (BSC.putStrLn (BSC.take 100 s)) >> printP
+		_ -> return ()
