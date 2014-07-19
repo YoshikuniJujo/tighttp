@@ -6,11 +6,14 @@ module Network.TigHTTP.Server (
 	) where
 
 import Control.Monad
+import "monads-tf" Control.Monad.Trans
 import Data.Maybe
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as LBS
 import Data.Time
+import Data.Pipe
+import Data.Pipe.List
 import System.Locale
 
 import Network.TigHTTP.HttpTypes
@@ -38,17 +41,18 @@ httpServer cl cnt = do
 
 httpContent :: HandleLike h => h -> Maybe Int -> HandleMonad h BS.ByteString
 httpContent h (Just n) = hlGet h n
-httpContent h _ = getChunked h
+httpContent h _ = (BS.concat . fromJust) `liftM` runPipe (getChunked h =$= toList)
 
-getChunked :: HandleLike h => h -> HandleMonad h BS.ByteString
+getChunked :: HandleLike h => h -> Pipe () BS.ByteString (HandleMonad h) ()
 getChunked h = do
-	(n :: Int) <- (fst . head . readHex . BSC.unpack) `liftM` hlGetLine h
-	hlDebug h "critical" . BSC.pack . (++ "\n") $ show n
+	(n :: Int) <- lift $ (fst . head . readHex . BSC.unpack) `liftM` hlGetLine h
+	lift . hlDebug h "critical" . BSC.pack . (++ "\n") $ show n
 	case n of
-		0 -> return ""
-		_ -> do	r <- hlGet h n
-			"" <- hlGetLine h
-			(r `BS.append`) `liftM` getChunked h
+		0 -> return ()
+		_ -> do	r <- lift $ hlGet h n
+			"" <- lift $ hlGetLine h
+			yield r
+			getChunked h
 
 mkChunked :: [BS.ByteString] -> BS.ByteString
 mkChunked [] = "0" `BS.append` "\r\n\r\n"
