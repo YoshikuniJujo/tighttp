@@ -14,16 +14,12 @@ main = do
 	addr : spn : _ <- getArgs
 	(pn :: Int) <- readIO spn
 	sv <- connectTo addr (PortNumber $ fromIntegral pn)
-	run sv $ do
+	_ <- run sv $ do
 		setHost (BSC.pack addr) 80
 		p <- httpGet
-		_ <- runPipe $ p =$= printP
-		return ()
+		runPipe $ p =$= printP
+	return ()
 
 printP :: MonadIO m => Pipe BSC.ByteString () m ()
-printP = do
-	ms <- await
-	case ms of
-		Just s -> liftIO (BSC.putStrLn (BSC.take 100 s)) >> printP
---		Just s -> liftIO (BSC.putStrLn s) >> printP
-		_ -> return ()
+printP = await >>=
+	maybe (return ()) (\s -> liftIO (BSC.putStrLn (BSC.take 100 s)) >> printP)
