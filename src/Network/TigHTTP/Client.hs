@@ -11,7 +11,6 @@ import Control.Monad
 import "monads-tf" Control.Monad.State
 import Data.Maybe
 import Data.Pipe
-import Data.Pipe.List
 import Numeric
 
 import Network.TigHTTP.HttpTypes
@@ -41,9 +40,6 @@ httpGet_ = gets fst >>= \sv -> do
 		. catMaybes $ showResponse res
 	return (httpContent_ $ contentLength <$> responseContentLength res)
 
-httpContent :: HandleLike h => Maybe Int -> ClientM h BS.ByteString
-httpContent n = (BS.concat . fromJust) `liftM` runPipe (httpContent_ n =$= toList)
-
 httpContent_ :: HandleLike h => Maybe Int -> Pipe () BS.ByteString (ClientM h) ()
 httpContent_ (Just n) = lift (gets fst) >>= \h -> yield =<< lift (lift $ hlGet h n)
 httpContent_ _ = getChunked `onBreak` readRest
@@ -62,7 +58,6 @@ getChunked = lift (gets fst) >>= \h -> do
 
 readRest :: HandleLike h => ClientM h ()
 readRest = gets fst >>= \h -> do
---	lift $ hlDebug h "critical" "readRest begin\n"
 	(n :: Int) <- lift $ (fst . head . readHex . BSC.unpack) `liftM` hlGetLine h
 	lift . hlDebug h "critical" . BSC.pack . (++ "\n") $ show n
 	case n of
@@ -70,17 +65,23 @@ readRest = gets fst >>= \h -> do
 		_ -> do	_ <- lift $ hlGet h n
 			"" <- lift $ hlGetLine h
 			readRest
---	lift $ hlDebug h "critical" "readRest end\n"
 
-httpPost :: HandleLike h => LBS.ByteString -> ClientM h (ContentType, BS.ByteString)
-httpPost cnt = gets fst >>= \sv -> do
+{-
+httpPost :: HandleLike h => LBS.ByteString -> ClientM h BS.ByteString
+httpPost cnt = do
+	p <- httpPost_ cnt
+	(BS.concat . fromJust) `liftM` runPipe (p =$= toList)
+	-}
+
+httpPost, httpPost_ :: HandleLike h =>
+	LBS.ByteString -> ClientM h (Pipe () BS.ByteString (ClientM h) ())
+httpPost = httpPost_
+httpPost_ cnt = gets fst >>= \sv -> do
 	let pst = mkChunked $ LBS.toChunks cnt
 	lift . hlPutStrLn sv . requestToString . flip post pst =<< gets snd
 	res <- lift $ parseResponse `liftM` hGetHeader sv
-	cnt' <- httpContent $ contentLength <$> responseContentLength res
-	let res' = res { responseBody = cnt' }
-	lift . hlDebug sv "critical" . (`BS.append` "\n") $ responseToString res'
-	return (responseContentType res', responseBody res')
+	lift . hlDebug sv "critical" $ responseToString res
+	return . httpContent_ $ contentLength <$> responseContentLength res
 
 mkChunked :: [BS.ByteString] -> BS.ByteString
 mkChunked [] = "0" `BS.append` "\r\n\r\n"

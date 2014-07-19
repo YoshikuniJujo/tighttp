@@ -1,6 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables, OverloadedStrings, PackageImports #-}
 
 import "monads-tf" Control.Monad.Trans
+import Data.Pipe
 import System.Environment
 import Network
 
@@ -14,7 +15,12 @@ main = do
 	addr : spn : _ <- getArgs
 	(pn :: Int) <- readIO spn
 	sv <- connectTo addr (PortNumber $ fromIntegral pn)
-	run sv $ do
+	_ <- run sv $ do
 		setHost (BSC.pack addr) pn
-		httpPost (LBS.fromChunks ["I am client.\n", "You are server.\n"])
-			>>= liftIO . print
+		p <- httpPost $ LBS.fromChunks
+			["I am client.\n", "You are server.\n"]
+		runPipe $ p =$= printP
+	return ()
+
+printP :: MonadIO m => Pipe BSC.ByteString () m ()
+printP = await >>= maybe (return ()) (\s -> liftIO (BSC.putStrLn s) >> printP)
