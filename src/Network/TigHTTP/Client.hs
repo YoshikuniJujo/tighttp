@@ -30,15 +30,10 @@ setHost :: HandleLike h => BS.ByteString -> Int -> ClientM h ()
 setHost hn pn = modify $ second $ const $ Just (hn, pn)
 
 httpGet :: HandleLike h => ClientM h (Pipe () BS.ByteString (ClientM h) ())
--- httpGet = (BS.concat . fromJust) `liftM` runPipe (httpGet_ =$= toList)
-httpGet = httpGet__
-{-
-	p <- httpGet__
-	(BS.concat . fromJust) `liftM` runPipe (p =$= toList)
-	-}
+httpGet = httpGet_
 
-httpGet__ :: HandleLike h => ClientM h (Pipe () BS.ByteString (ClientM h) ())
-httpGet__ = gets fst >>= \sv -> do
+httpGet_ :: HandleLike h => ClientM h (Pipe () BS.ByteString (ClientM h) ())
+httpGet_ = gets fst >>= \sv -> do
 	lift . hlPutStrLn sv . request =<< gets snd
 	src <- lift $ hGetHeader sv
 	let res = parseResponse src
@@ -51,7 +46,7 @@ httpContent n = (BS.concat . fromJust) `liftM` runPipe (httpContent_ n =$= toLis
 
 httpContent_ :: HandleLike h => Maybe Int -> Pipe () BS.ByteString (ClientM h) ()
 httpContent_ (Just n) = lift (gets fst) >>= \h -> yield =<< lift (lift $ hlGet h n)
-httpContent_ _ = getChunked
+httpContent_ _ = getChunked `onBreak` readRest
 
 getChunked :: HandleLike h => Pipe () BS.ByteString (ClientM h) ()
 getChunked = lift (gets fst) >>= \h -> do
@@ -64,6 +59,18 @@ getChunked = lift (gets fst) >>= \h -> do
 			"" <- lift . lift $ hlGetLine h
 			yield r
 			getChunked
+
+readRest :: HandleLike h => ClientM h ()
+readRest = gets fst >>= \h -> do
+--	lift $ hlDebug h "critical" "readRest begin\n"
+	(n :: Int) <- lift $ (fst . head . readHex . BSC.unpack) `liftM` hlGetLine h
+	lift . hlDebug h "critical" . BSC.pack . (++ "\n") $ show n
+	case n of
+		0 -> return ()
+		_ -> do	_ <- lift $ hlGet h n
+			"" <- lift $ hlGetLine h
+			readRest
+--	lift $ hlDebug h "critical" "readRest end\n"
 
 httpPost :: HandleLike h => LBS.ByteString -> ClientM h (ContentType, BS.ByteString)
 httpPost cnt = gets fst >>= \sv -> do

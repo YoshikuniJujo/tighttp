@@ -34,12 +34,16 @@ main = do
 		run t $ do
 			setHost (BSC.pack addr) 443
 			p <- httpGet
-			_ <- runPipe $ p =$= printP
+			_ <- runPipe $ p =$= takeP 1 =$= printP
 			return ()
-			{-
-			(BS.concat . fromJust) `liftM` runPipe (p =$= toList)
-				>>= liftIO . putStrLn . (++ "...") . take 100 . show
-				-}
+
+takeP :: Monad m => Int -> Pipe a a m ()
+takeP 0 = return ()
+takeP n = do
+	mx <- await
+	case mx of
+		Just x -> yield x >> takeP (n - 1)
+		_ -> return ()
 
 printP :: MonadIO m => Pipe BSC.ByteString () m ()
 printP = do
