@@ -28,3 +28,4 @@ main = do
 		run t $ do
 			setHost (BSC.pack addr) 443
 			httpGet >>= liftIO . putStrLn . (++ "...") . take 100 . show
+--			httpGet >>= liftIO . putStrLn . show

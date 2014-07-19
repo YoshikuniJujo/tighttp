@@ -10,6 +10,8 @@ import Control.Arrow hiding ((+++))
 import Control.Monad
 import "monads-tf" Control.Monad.State
 import Data.Maybe
+import Data.Pipe
+import Data.Pipe.List
 import Numeric
 
 import Network.TigHTTP.HttpTypes
@@ -32,8 +34,6 @@ httpGet = gets fst >>= \sv -> do
 	lift . hlPutStrLn sv . request =<< gets snd
 	src <- lift $ hGetHeader sv
 	let res = parseResponse src
---	lift . hlDebug sv "critical" . BSC.pack . (++ "\n\n")
---		. show $ responseTransferEncoding res
 	cnt <- httpContent $ contentLength <$> responseContentLength res
 	let res' = res { responseBody = cnt }
 	lift . mapM_ (hlDebug sv "critical" . (`BS.append` "\n") . BS.take 100)
@@ -43,17 +43,19 @@ httpGet = gets fst >>= \sv -> do
 
 httpContent :: HandleLike h => Maybe Int -> ClientM h BS.ByteString
 httpContent (Just n) = gets fst >>= lift . flip hlGet n
-httpContent _ = getChunked
+httpContent _ = (BS.concat . fromJust) `liftM` runPipe (getChunked =$= toList)
 
-getChunked :: HandleLike h => ClientM h BS.ByteString
-getChunked = gets fst >>= \h -> do
-	(n :: Int) <- lift $ (fst . head . readHex . BSC.unpack) `liftM` hlGetLine h
---	lift . hlDebug h "critical" . BSC.pack . (++ "\n") $ show n
+getChunked :: HandleLike h => Pipe () BS.ByteString (ClientM h) ()
+getChunked = lift (gets fst) >>= \h -> do
+	(n :: Int) <- lift . lift $
+		(fst . head . readHex . BSC.unpack) `liftM` hlGetLine h
+	lift . lift . hlDebug h "critical" . BSC.pack . (++ "\n") $ show n
 	case n of
-		0 -> return ""
-		_ -> do	r <- lift $ hlGet h n
-			"" <- lift $ hlGetLine h
-			(r `BS.append`) `liftM` getChunked
+		0 -> return ()
+		_ -> do	r <- lift . lift $ hlGet h n
+			"" <- lift . lift $ hlGetLine h
+			yield r
+			getChunked
 
 httpPost :: HandleLike h => LBS.ByteString -> ClientM h (ContentType, BS.ByteString)
 httpPost cnt = gets fst >>= \sv -> do
