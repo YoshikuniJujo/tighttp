@@ -29,21 +29,36 @@ run h = (`evalStateT` (h, Nothing))
 setHost :: HandleLike h => BS.ByteString -> Int -> ClientM h ()
 setHost hn pn = modify $ second $ const $ Just (hn, pn)
 
-httpGet :: HandleLike h => ClientM h (ContentType, BS.ByteString)
-httpGet = gets fst >>= \sv -> do
+httpGet :: HandleLike h => ClientM h BS.ByteString
+-- httpGet = (BS.concat . fromJust) `liftM` runPipe (httpGet_ =$= toList)
+httpGet = do
+	p <- httpGet__
+	(BS.concat . fromJust) `liftM` runPipe (p =$= toList)
+
+httpGet_ :: HandleLike h => Pipe () BS.ByteString (ClientM h) ()
+httpGet_ = lift (gets fst) >>= \sv -> do
+	lift . lift . hlPutStrLn sv . request =<< lift (gets snd)
+	src <- lift . lift $ hGetHeader sv
+	let res = parseResponse src
+	lift . lift . mapM_ (hlDebug sv "critical" . (`BS.append` "\n") . BS.take 100)
+		. catMaybes $ showResponse res
+	httpContent_ $ contentLength <$> responseContentLength res
+
+httpGet__ :: HandleLike h => ClientM h (Pipe () BS.ByteString (ClientM h) ())
+httpGet__ = gets fst >>= \sv -> do
 	lift . hlPutStrLn sv . request =<< gets snd
 	src <- lift $ hGetHeader sv
 	let res = parseResponse src
-	cnt <- httpContent $ contentLength <$> responseContentLength res
-	let res' = res { responseBody = cnt }
 	lift . mapM_ (hlDebug sv "critical" . (`BS.append` "\n") . BS.take 100)
-		. catMaybes $ showResponse res'
-	lift $ hlDebug sv "critical" "\n"
-	return (responseContentType res', responseBody res')
+		. catMaybes $ showResponse res
+	return (httpContent_ $ contentLength <$> responseContentLength res)
 
 httpContent :: HandleLike h => Maybe Int -> ClientM h BS.ByteString
-httpContent (Just n) = gets fst >>= lift . flip hlGet n
-httpContent _ = (BS.concat . fromJust) `liftM` runPipe (getChunked =$= toList)
+httpContent n = (BS.concat . fromJust) `liftM` runPipe (httpContent_ n =$= toList)
+
+httpContent_ :: HandleLike h => Maybe Int -> Pipe () BS.ByteString (ClientM h) ()
+httpContent_ (Just n) = lift (gets fst) >>= \h -> yield =<< lift (lift $ hlGet h n)
+httpContent_ _ = getChunked
 
 getChunked :: HandleLike h => Pipe () BS.ByteString (ClientM h) ()
 getChunked = lift (gets fst) >>= \h -> do
