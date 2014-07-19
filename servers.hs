@@ -4,6 +4,9 @@ import Control.Applicative
 import Control.Monad
 import "monads-tf" Control.Monad.State
 import Control.Concurrent
+import Data.Maybe
+import Data.Pipe
+import Data.Pipe.List
 import System.Environment
 import Network
 
@@ -13,6 +16,8 @@ import Network.PeyoTLS.ReadFile
 import Network.PeyoTLS.Server
 import Network.TigHTTP.Server
 import "crypto-random" Crypto.Random
+
+import qualified Data.ByteString as BS
 
 main :: IO ()
 main = do
@@ -29,6 +34,7 @@ main = do
 			cl <- open client ["TLS_RSA_WITH_AES_128_CBC_SHA"] [(k, c)]
 				Nothing
 			ret <- httpServer cl "Good afternoon, world!\n"
-			hlDebug cl "critical" ret
+			bs <- (BS.concat . fromJust) `liftM` runPipe (ret =$= toList)
+			hlDebug cl "critical" bs
 			hlClose cl
 		return ()

@@ -21,25 +21,28 @@ import Data.HandleLike
 
 import Numeric
 
+{-
 httpServer :: HandleLike h => h -> LBS.ByteString -> HandleMonad h BS.ByteString
+httpServer cl cnt = do
+	p <- httpServer_ cl cnt
+	(BS.concat . fromJust) `liftM` runPipe (p =$= toList)
+	-}
+
+httpServer :: HandleLike h => h ->
+	LBS.ByteString -> HandleMonad h (Pipe () BS.ByteString (HandleMonad h) ())
 httpServer cl cnt = do
 	h <- hlGetHeader cl
 	let req = parseReq h
-	b <- case req of
-		RequestPost _ _ _ ->
-			(\n -> (BS.concat . fromJust) `liftM`
-					runPipe (httpContent cl n =$= toList))
-				$ requestBodyLength req
-		_ -> return ""
-	let req' = postAddBody req b
-	hlDebug cl "critical" . BSC.pack . (++ "\n") $ show req'
+	r <- case req of
+		RequestPost _ _ _ -> return . httpContent cl $
+			requestBodyLength req
+		_ -> return (return ())
+	hlDebug cl "critical" . BSC.pack . (++ "\n") $ show req
 	mapM_ (hlDebug cl "critical" . (`BS.append` "\n")) .
-		catMaybes . showRequest $ req'
+		catMaybes . showRequest $ req
 	hlPutStrLn cl . crlf . catMaybes . showResponse . mkContents . mkChunked
 		$ LBS.toChunks cnt
-	case req' of
-		RequestPost _ _ p -> return (getPostBody req')
-		_ -> return (getPostBody req')
+	return r
 
 httpContent :: HandleLike h =>
 	h -> Maybe Int -> Pipe () BS.ByteString (HandleMonad h) ()

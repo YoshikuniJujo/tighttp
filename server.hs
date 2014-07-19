@@ -6,6 +6,9 @@ import System.Environment
 import Network
 import Network.TigHTTP.Server
 
+import Data.Pipe
+import Data.Pipe.List
+
 import qualified Data.ByteString.Lazy as LBS
 
 main :: IO ()
@@ -19,5 +22,5 @@ main = do
 			ret <- httpServer client $ LBS.fromChunks [
 				"Good afternoon, world!\n",
 				"Good night, world!\n" ]
-			print ret
+			print =<< runPipe (ret =$= toList)
 		return ()
