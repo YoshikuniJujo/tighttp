@@ -21,13 +21,15 @@ import Data.HandleLike
 
 import Numeric
 
-httpServer :: HandleLike h =>
-	h -> LBS.ByteString -> HandleMonad h (Maybe ContentType, BS.ByteString)
+httpServer :: HandleLike h => h -> LBS.ByteString -> HandleMonad h BS.ByteString
 httpServer cl cnt = do
 	h <- hlGetHeader cl
 	let req = parseReq h
 	b <- case req of
-		RequestPost _ _ _ -> httpContent cl $ requestBodyLength req -- hlGet cl $ maybe 10 id $ requestBodyLength req
+		RequestPost _ _ _ ->
+			(\n -> (BS.concat . fromJust) `liftM`
+					runPipe (httpContent cl n =$= toList))
+				$ requestBodyLength req
 		_ -> return ""
 	let req' = postAddBody req b
 	hlDebug cl "critical" . BSC.pack . (++ "\n") $ show req'
@@ -36,12 +38,13 @@ httpServer cl cnt = do
 	hlPutStrLn cl . crlf . catMaybes . showResponse . mkContents . mkChunked
 		$ LBS.toChunks cnt
 	case req' of
-		RequestPost _ _ p -> return (postContentType p, getPostBody req')
-		_ -> return (Nothing, getPostBody req')
+		RequestPost _ _ p -> return (getPostBody req')
+		_ -> return (getPostBody req')
 
-httpContent :: HandleLike h => h -> Maybe Int -> HandleMonad h BS.ByteString
-httpContent h (Just n) = hlGet h n
-httpContent h _ = (BS.concat . fromJust) `liftM` runPipe (getChunked h =$= toList)
+httpContent :: HandleLike h =>
+	h -> Maybe Int -> Pipe () BS.ByteString (HandleMonad h) ()
+httpContent h (Just n) = lift (hlGet h n) >>= yield
+httpContent h _ = getChunked h
 
 getChunked :: HandleLike h => h -> Pipe () BS.ByteString (HandleMonad h) ()
 getChunked h = do

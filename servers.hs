@@ -28,7 +28,7 @@ main = do
 		_ <- liftIO . forkIO . (`run` g) $ do
 			cl <- open client ["TLS_RSA_WITH_AES_128_CBC_SHA"] [(k, c)]
 				Nothing
-			(_, ret) <- httpServer cl "Good afternoon, world!\n"
+			ret <- httpServer cl "Good afternoon, world!\n"
 			hlDebug cl "critical" ret
 			hlClose cl
 		return ()
