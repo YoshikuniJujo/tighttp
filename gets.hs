@@ -34,7 +34,7 @@ main = do
 		p <- run t $ do
 			setHost (BSC.pack addr) 443
 			httpGet
-		_ <- runPipe $ p =$= takeP 1 =$= printP
+		_ <- runPipe $ responseBody p =$= takeP 1 =$= printP
 		return ()
 
 takeP :: Monad m => Int -> Pipe a a m ()

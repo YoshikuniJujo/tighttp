@@ -80,7 +80,7 @@ mkContents cnt = Response {
 	responseAcceptRanges = Nothing,
 	responseConnection = Nothing,
 	responseOthers = [],
-	responseBody = fromList [cnt] -- $ LBS.toChunks cnt
+	responseBody = fromList [cnt]
  }
 
 hlGetHeader :: HandleLike h => h -> HandleMonad h [BS.ByteString]

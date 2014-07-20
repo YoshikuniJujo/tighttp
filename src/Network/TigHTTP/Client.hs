@@ -3,6 +3,7 @@
 module Network.TigHTTP.Client (
 	ClientM, run, setHost, httpGet, httpPost,
 	ContentType(..), Type(..), Subtype(..), Parameter(..), Charset(..),
+	Response(..),
 	) where
 
 import Control.Applicative
@@ -29,14 +30,20 @@ run h = (`evalStateT` (h, Nothing))
 setHost :: HandleLike h => BS.ByteString -> Int -> ClientM h ()
 setHost hn pn = modify . second . const $ Just (hn, pn)
 
-httpGet :: HandleLike h => ClientM h (Pipe () BS.ByteString (HandleMonad h) ())
+httpGet :: HandleLike h => ClientM h (Response h)
 httpGet = gets fst >>= \sv -> do
 	lift . hlPutStrLn sv . request =<< gets snd
 	src <- lift $ hGetHeader sv
 	let res = parseResponse src
 	lift $ mapM_ (hlDebug sv "critical" . (`BS.append` "\n") . BS.take 100)
 		. catMaybes =<< showResponse sv res
-	return (httpContent (contentLength <$> responseContentLength res) sv)
+	let res' = putResponseBody sv res
+		(httpContent (contentLength <$> responseContentLength res) sv)
+	return res'
+
+putResponseBody :: HandleLike h =>
+	h -> Response h -> Pipe () BS.ByteString (HandleMonad h) () -> Response h
+putResponseBody _ res rb = res { responseBody = rb }
 
 httpContent_ :: HandleLike h => Maybe Int -> Pipe () BS.ByteString (ClientM h) ()
 httpContent_ n = toClientPipe (httpContent n)
