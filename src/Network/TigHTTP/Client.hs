@@ -11,6 +11,7 @@ import Control.Monad
 import "monads-tf" Control.Monad.State
 import Data.Maybe
 import Data.Pipe
+import Data.Pipe.List
 import Numeric
 
 import Network.TigHTTP.HttpTypes
@@ -28,50 +29,51 @@ run h = (`evalStateT` (h, Nothing))
 setHost :: HandleLike h => BS.ByteString -> Int -> ClientM h ()
 setHost hn pn = modify . second . const $ Just (hn, pn)
 
-httpGet :: HandleLike h => ClientM h (Pipe () BS.ByteString (ClientM h) ())
-httpGet = httpGet_
-
-httpGet_ :: HandleLike h => ClientM h (Pipe () BS.ByteString (ClientM h) ())
-httpGet_ = gets fst >>= \sv -> do
+httpGet :: HandleLike h => ClientM h (Pipe () BS.ByteString (HandleMonad h) ())
+httpGet = gets fst >>= \sv -> do
 	lift . hlPutStrLn sv . request =<< gets snd
 	src <- lift $ hGetHeader sv
 	let res = parseResponse src
 	lift . mapM_ (hlDebug sv "critical" . (`BS.append` "\n") . BS.take 100)
 		. catMaybes $ showResponse res
-	return (httpContent_ $ contentLength <$> responseContentLength res)
+	return (httpContent (contentLength <$> responseContentLength res) sv)
 
 httpContent_ :: HandleLike h => Maybe Int -> Pipe () BS.ByteString (ClientM h) ()
-httpContent_ (Just n) = lift (gets fst) >>= \h -> yield =<< lift (lift $ hlGet h n)
-httpContent_ _ = getChunked `onBreak` readRest
+httpContent_ n = toClientPipe (httpContent n)
 
-getChunked :: HandleLike h => Pipe () BS.ByteString (ClientM h) ()
-getChunked = lift (gets fst) >>= \h -> do
-	(n :: Int) <- lift . lift $
-		(fst . head . readHex . BSC.unpack) `liftM` hlGetLine h
-	lift . lift . hlDebug h "critical" . BSC.pack . (++ "\n") $ show n
-	case n of
-		0 -> return ()
-		_ -> do	r <- lift . lift $ hlGet h n
-			"" <- lift . lift $ hlGetLine h
-			yield r
-			getChunked
+httpContent :: HandleLike h =>
+	Maybe Int -> h -> Pipe () BS.ByteString (HandleMonad h) ()
+httpContent (Just n) h = yield =<< lift (hlGet h n)
+httpContent _ h = getChunked h `onBreak` readRest h
 
-readRest :: HandleLike h => ClientM h ()
-readRest = gets fst >>= \h -> do
+toClientPipe :: HandleLike h => (h -> Pipe () BS.ByteString (HandleMonad h) ()) ->
+	Pipe () BS.ByteString (ClientM h) ()
+toClientPipe p = do
+	h <- lift $ gets fst
+	Just c <- lift . lift . runPipe $ p h =$= toList
+	fromList c
+
+getChunked :: HandleLike h => h -> Pipe () BS.ByteString (HandleMonad h) ()
+getChunked h = do
 	(n :: Int) <- lift $ (fst . head . readHex . BSC.unpack) `liftM` hlGetLine h
 	lift . hlDebug h "critical" . BSC.pack . (++ "\n") $ show n
 	case n of
 		0 -> return ()
-		_ -> do	_ <- lift $ hlGet h n
+		_ -> do	r <- lift $ hlGet h n
 			"" <- lift $ hlGetLine h
-			readRest
+			yield r
+			getChunked h
 
-{-
-httpPost :: HandleLike h => LBS.ByteString -> ClientM h BS.ByteString
-httpPost cnt = do
-	p <- httpPost_ cnt
-	(BS.concat . fromJust) `liftM` runPipe (p =$= toList)
-	-}
+readRest :: HandleLike h => h -> HandleMonad h ()
+readRest h = do
+	hlDebug h "critical" "begin readRest\n"
+	(n :: Int) <- (fst . head . readHex . BSC.unpack) `liftM` hlGetLine h
+	hlDebug h "critical" . BSC.pack . (++ "\n") $ show n
+	case n of
+		0 -> return ()
+		_ -> do	_ <- hlGet h n
+			"" <- hlGetLine h
+			readRest h
 
 httpPost, httpPost_ :: HandleLike h =>
 	LBS.ByteString -> ClientM h (Pipe () BS.ByteString (ClientM h) ())
@@ -87,11 +89,6 @@ mkChunked :: [BS.ByteString] -> BS.ByteString
 mkChunked = flip foldr ("0" `BS.append` "\r\n\r\n") $ \b ->
 	BS.append (BSC.pack (showHex (BS.length b) "") `BS.append` "\r\n"
 		`BS.append` b `BS.append` "\r\n")
-{-
-mkChunked [] = "0" `BS.append` "\r\n\r\n"
-mkChunked (b : bs) = BSC.pack (showHex (BS.length b) "") `BS.append` "\r\n"
-	`BS.append` b `BS.append` "\r\n" `BS.append` mkChunked bs
-	-}
 
 hGetHeader :: HandleLike h => h -> HandleMonad h [BS.ByteString]
 hGetHeader h = do

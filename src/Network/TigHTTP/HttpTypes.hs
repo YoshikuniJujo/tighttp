@@ -21,6 +21,7 @@ import Data.Char
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import Data.Time
+import Data.Pipe
 import System.Locale
 
 import Network.TigHTTP.Papillon
@@ -383,8 +384,8 @@ data Response = Response {
 	responseAcceptRanges :: Maybe BS.ByteString,
 	responseConnection :: Maybe BS.ByteString,
 	responseOthers :: [(BS.ByteString, BS.ByteString)],
-	responseBody :: BS.ByteString
- } deriving Show
+	responseBody :: Pipe () BS.ByteString IO ()
+	}
 
 parseResponse :: [BS.ByteString] -> Response
 parseResponse (h : t) = let (v, sc) = parseResponseLine h in
@@ -418,7 +419,7 @@ parseResponseSep v sc kvs = Response {
 	responseAcceptRanges = lookup "Accept-Ranges" kvs,
 	responseConnection = lookup "Connection" kvs,
 	responseOthers = filter ((`notElem` responseKeys) . fst) kvs,
-	responseBody = ""
+	responseBody = return ()
  }
 
 responseKeys :: [BS.ByteString]
@@ -459,11 +460,11 @@ showResponse r =
 		("ETag: " +++) <$> responseETag r,
 		("Accept-Ranges: " +++) <$> responseAcceptRanges r,
 		("Connection: " +++) <$> responseConnection r
-	 ] ++
+	 ] {- ++
 	map (\(k, v) -> Just $ k +++ ": " +++ v) (responseOthers r) ++
 	[	Just "",
 		Just $ responseBody r
-	 ]
+	 ] -}
 
 data StatusCode
 	= Continue

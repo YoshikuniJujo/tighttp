@@ -31,11 +31,11 @@ main = do
 	g <- cprgCreate <$> createEntropyPool :: IO SystemRNG
 	(`P.run` g) $ do
 		t <- P.open sv ["TLS_RSA_WITH_AES_128_CBC_SHA"] [] ca
-		run t $ do
+		p <- run t $ do
 			setHost (BSC.pack addr) 443
-			p <- httpGet
-			_ <- runPipe $ p =$= takeP 1 =$= printP
-			return ()
+			httpGet
+		_ <- runPipe $ p =$= takeP 1 =$= printP
+		return ()
 
 takeP :: Monad m => Int -> Pipe a a m ()
 takeP 0 = return ()

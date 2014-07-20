@@ -13,6 +13,7 @@ import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as LBS
 import Data.Time
 import Data.Pipe
+import Data.Pipe.List
 import System.Locale
 
 import Network.TigHTTP.HttpTypes
@@ -79,7 +80,7 @@ mkContents cnt = Response {
 	responseAcceptRanges = Nothing,
 	responseConnection = Nothing,
 	responseOthers = [],
-	responseBody = cnt
+	responseBody = fromList [cnt] -- $ LBS.toChunks cnt
  }
 
 hlGetHeader :: HandleLike h => h -> HandleMonad h [BS.ByteString]
