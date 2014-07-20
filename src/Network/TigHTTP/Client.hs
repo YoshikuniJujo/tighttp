@@ -12,7 +12,6 @@ import Control.Monad
 import "monads-tf" Control.Monad.State
 import Data.Maybe
 import Data.Pipe
-import Data.Pipe.List
 import Numeric
 
 import Network.TigHTTP.HttpTypes
@@ -45,20 +44,10 @@ putResponseBody :: HandleLike h =>
 	h -> Response h -> Pipe () BS.ByteString (HandleMonad h) () -> Response h
 putResponseBody _ res rb = res { responseBody = rb }
 
-httpContent_ :: HandleLike h => Maybe Int -> Pipe () BS.ByteString (ClientM h) ()
-httpContent_ n = toClientPipe (httpContent n)
-
 httpContent :: HandleLike h =>
 	Maybe Int -> h -> Pipe () BS.ByteString (HandleMonad h) ()
 httpContent (Just n) h = yield =<< lift (hlGet h n)
 httpContent _ h = getChunked h `onBreak` readRest h
-
-toClientPipe :: HandleLike h => (h -> Pipe () BS.ByteString (HandleMonad h) ()) ->
-	Pipe () BS.ByteString (ClientM h) ()
-toClientPipe p = do
-	h <- lift $ gets fst
-	Just c <- lift . lift . runPipe $ p h =$= toList
-	fromList c
 
 getChunked :: HandleLike h => h -> Pipe () BS.ByteString (HandleMonad h) ()
 getChunked h = do
@@ -82,15 +71,15 @@ readRest h = do
 			"" <- hlGetLine h
 			readRest h
 
-httpPost, httpPost_ :: HandleLike h =>
-	LBS.ByteString -> ClientM h (Pipe () BS.ByteString (ClientM h) ())
-httpPost = httpPost_
-httpPost_ cnt = gets fst >>= \sv -> do
+httpPost :: HandleLike h => LBS.ByteString -> ClientM h (Response h)
+httpPost cnt = gets fst >>= \sv -> do
 	let pst = mkChunked $ LBS.toChunks cnt
 	lift . hlPutStrLn sv . requestToString . flip post pst =<< gets snd
 	res <- lift $ parseResponse `liftM` hGetHeader sv
 	lift $ hlDebug sv "critical" =<< responseToString sv res
-	return . httpContent_ $ contentLength <$> responseContentLength res
+	let res' = putResponseBody sv res $
+		httpContent (contentLength <$> responseContentLength res) sv
+	return res'
 
 mkChunked :: [BS.ByteString] -> BS.ByteString
 mkChunked = flip foldr ("0" `BS.append` "\r\n\r\n") $ \b ->

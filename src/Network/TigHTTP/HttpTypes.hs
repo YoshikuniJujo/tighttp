@@ -450,7 +450,7 @@ parseStatusCode sc
 parseStatusCode sc = error $ "parseStatusCode: bad status code: " ++ BSC.unpack sc
 
 showResponse :: HandleLike h => h -> Response h -> HandleMonad h [Maybe BS.ByteString]
-showResponse h r = do
+showResponse _ r = do
 	let	hd = [
 			Just $ showVersion (responseVersion r) +++ " " +++
 				showStatusCode (responseStatusCode r),

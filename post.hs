@@ -15,11 +15,11 @@ main = do
 	addr : spn : _ <- getArgs
 	(pn :: Int) <- readIO spn
 	sv <- connectTo addr (PortNumber $ fromIntegral pn)
-	_ <- run sv $ do
+	p <- run sv $ do
 		setHost (BSC.pack addr) pn
-		p <- httpPost $ LBS.fromChunks
+		httpPost $ LBS.fromChunks
 			["I am client.\n", "You are server.\n"]
-		runPipe $ p =$= printP
+	_ <- runPipe $ responseBody p =$= printP
 	return ()
 
 printP :: MonadIO m => Pipe BSC.ByteString () m ()

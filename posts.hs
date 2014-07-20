@@ -24,10 +24,10 @@ main = do
 	g <- cprgCreate <$> createEntropyPool :: IO SystemRNG
 	_ <- (`P.run` g) $ do
 		t <- P.open sv ["TLS_RSA_WITH_AES_128_CBC_SHA"] [] ca
-		run t $ do
+		p <- run t $ do
 			setHost (BSC.pack addr) pn
-			p <- httpPost "I am client.\n"
-			runPipe $ p =$= printP
+			httpPost "I am client.\n"
+		runPipe $ responseBody p =$= printP
 	return ()
 
 printP :: MonadIO m => Pipe BSC.ByteString () m ()
