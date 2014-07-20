@@ -26,7 +26,7 @@ run :: HandleLike h => h -> ClientM h a -> HandleMonad h a
 run h = (`evalStateT` (h, Nothing))
 
 setHost :: HandleLike h => BS.ByteString -> Int -> ClientM h ()
-setHost hn pn = modify $ second $ const $ Just (hn, pn)
+setHost hn pn = modify . second . const $ Just (hn, pn)
 
 httpGet :: HandleLike h => ClientM h (Pipe () BS.ByteString (ClientM h) ())
 httpGet = httpGet_
@@ -84,14 +84,19 @@ httpPost_ cnt = gets fst >>= \sv -> do
 	return . httpContent_ $ contentLength <$> responseContentLength res
 
 mkChunked :: [BS.ByteString] -> BS.ByteString
+mkChunked = flip foldr ("0" `BS.append` "\r\n\r\n") $ \b ->
+	BS.append (BSC.pack (showHex (BS.length b) "") `BS.append` "\r\n"
+		`BS.append` b `BS.append` "\r\n")
+{-
 mkChunked [] = "0" `BS.append` "\r\n\r\n"
 mkChunked (b : bs) = BSC.pack (showHex (BS.length b) "") `BS.append` "\r\n"
 	`BS.append` b `BS.append` "\r\n" `BS.append` mkChunked bs
+	-}
 
 hGetHeader :: HandleLike h => h -> HandleMonad h [BS.ByteString]
 hGetHeader h = do
 	l <- hlGetLine h
-	if (BS.null l) then return [] else (l :) `liftM` hGetHeader h
+	if BS.null l then return [] else (l :) `liftM` hGetHeader h
 
 crlf :: [BS.ByteString] -> BS.ByteString
 crlf = BS.concat . map (+++ "\r\n")
@@ -116,7 +121,7 @@ responseToString :: Response -> BS.ByteString
 responseToString = crlf . catMaybes . showResponse
 
 post :: Maybe (BS.ByteString, Int) -> BS.ByteString -> Request
-post hnpn cnt = RequestPost (Uri "/") (Version 1 1) $
+post hnpn cnt = RequestPost (Uri "/") (Version 1 1)
 	Post {
 		postHost = uncurry Host . second Just <$> hnpn,
 		postUserAgent = Just [Product "Mozilla" (Just "5.0")],

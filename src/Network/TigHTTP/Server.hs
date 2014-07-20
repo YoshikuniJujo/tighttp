@@ -26,7 +26,7 @@ getRequest cl = do
 	h <- hlGetHeader cl
 	let req = parseReq h
 	r <- case req of
-		RequestPost _ _ _ -> return . httpContent cl $
+		RequestPost {} -> return . httpContent cl $
 			requestBodyLength req
 		_ -> return (return ())
 	hlDebug cl "critical" . BSC.pack . (++ "\n") $ show req
@@ -55,9 +55,14 @@ getChunked h = do
 			getChunked h
 
 mkChunked :: [BS.ByteString] -> BS.ByteString
+mkChunked = flip foldr ("0" `BS.append` "\r\nr\n") $ \b ->
+	BS.append (BSC.pack (showHex (BS.length b) "") `BS.append` "\r\n"
+		`BS.append` b `BS.append` "\r\n")
+{-
 mkChunked [] = "0" `BS.append` "\r\n\r\n"
 mkChunked (b : bs) = BSC.pack (showHex (BS.length b) "") `BS.append` "\r\n"
 	`BS.append` b `BS.append` "\r\n" `BS.append` mkChunked bs
+	-}
 
 mkContents :: BS.ByteString -> Response
 mkContents cnt = Response {
@@ -80,7 +85,7 @@ mkContents cnt = Response {
 hlGetHeader :: HandleLike h => h -> HandleMonad h [BS.ByteString]
 hlGetHeader h = do
 	l <- hlGetLine h
-	if (BS.null l) then return [] else (l :) `liftM` hlGetHeader h
+	if BS.null l then return [] else (l :) `liftM` hlGetHeader h
 
 -- dropCR :: BS.ByteString -> BS.ByteString
 -- dropCR s = if myLast "dropCR" s == '\r' then BS.init s else s

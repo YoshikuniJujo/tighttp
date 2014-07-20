@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, QuasiQuotes #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Network.TigHTTP.HttpTypes (
 	Version(..),
@@ -247,7 +247,7 @@ parseHost src = case BSC.span (/= ':') src of
 		_ -> error "parseHost: never occur"
 
 showHost :: Host -> BS.ByteString
-showHost (Host h p) = h +++ (maybe "" ((':' -:-) . BSC.pack . show) p)
+showHost (Host h p) = h +++ maybe "" ((':' -:-) . BSC.pack . show) p
 
 data Product
 	= Product BS.ByteString (Maybe BS.ByteString)
@@ -352,7 +352,7 @@ showConnection :: Connection -> BS.ByteString
 showConnection (Connection c) = c
 
 parseConnection :: BS.ByteString -> Connection
-parseConnection src = Connection src
+parseConnection = Connection
 
 data CacheControl
 	= MaxAge Int
@@ -449,7 +449,7 @@ showResponse r =
 			showStatusCode (responseStatusCode r),
 		Just $ "Date: " +++ maybe "" showTime (responseDate r),
 		("Content-Length: " +++) . showContentLength <$>
-			(responseContentLength r),
+			responseContentLength r,
 		("Transfer-Encoding: " +++) . showTransferEncoding <$>
 			responseTransferEncoding r,
 		Just $ "Content-Type: " +++
