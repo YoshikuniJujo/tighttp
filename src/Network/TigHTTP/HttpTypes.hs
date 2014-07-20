@@ -16,15 +16,19 @@ module Network.TigHTTP.HttpTypes (
 ) where
 
 import Control.Applicative
+import Control.Monad
 import Data.Maybe
 import Data.Char
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import Data.Time
 import Data.Pipe
+import Data.Pipe.List
 import System.Locale
 
 import Network.TigHTTP.Papillon
+
+import Data.HandleLike
 
 (+++) :: BS.ByteString -> BS.ByteString -> BS.ByteString
 (+++) = BS.append
@@ -371,7 +375,7 @@ parseCacheControl ccma
 		_ -> error "parseCacheControl: bad"
 parseCacheControl cc = CacheControlRaw cc
 
-data Response = Response {
+data Response h = Response {
 	responseVersion :: Version,
 	responseStatusCode :: StatusCode,
 	responseDate :: Maybe UTCTime,
@@ -384,10 +388,10 @@ data Response = Response {
 	responseAcceptRanges :: Maybe BS.ByteString,
 	responseConnection :: Maybe BS.ByteString,
 	responseOthers :: [(BS.ByteString, BS.ByteString)],
-	responseBody :: Pipe () BS.ByteString IO ()
+	responseBody :: Pipe () BS.ByteString (HandleMonad h) ()
 	}
 
-parseResponse :: [BS.ByteString] -> Response
+parseResponse :: HandleLike h => [BS.ByteString] -> Response h
 parseResponse (h : t) = let (v, sc) = parseResponseLine h in
 	parseResponseSep v sc $ map separate t
 	where
@@ -398,7 +402,8 @@ parseResponse (h : t) = let (v, sc) = parseResponseLine h in
 	-- let (k, ':' : ' ' : v) = span (/= ':') i in (k, v)
 parseResponse _ = error "parseResponse: bad response"
 
-parseResponseSep :: Version -> StatusCode -> [(BS.ByteString, BS.ByteString)] -> Response
+parseResponseSep :: HandleLike h => Version -> StatusCode ->
+	[(BS.ByteString, BS.ByteString)] -> Response h
 parseResponseSep v sc kvs = Response {
 	responseVersion = v,
 	responseStatusCode = sc,
@@ -444,27 +449,30 @@ parseStatusCode sc
 	| ("400", _) <- BSC.span (not . isSpace) sc = BadRequest
 parseStatusCode sc = error $ "parseStatusCode: bad status code: " ++ BSC.unpack sc
 
-showResponse :: Response -> [Maybe BS.ByteString]
-showResponse r =
-	[	Just $ showVersion (responseVersion r) +++ " " +++
-			showStatusCode (responseStatusCode r),
-		Just $ "Date: " +++ maybe "" showTime (responseDate r),
-		("Content-Length: " +++) . showContentLength <$>
-			responseContentLength r,
-		("Transfer-Encoding: " +++) . showTransferEncoding <$>
-			responseTransferEncoding r,
-		Just $ "Content-Type: " +++
-			showContentType (responseContentType r),
-		("Server: " +++) . BSC.unwords . map showProduct <$> responseServer r,
-		("Last-Modified: " +++) . showTime <$> responseLastModified r,
-		("ETag: " +++) <$> responseETag r,
-		("Accept-Ranges: " +++) <$> responseAcceptRanges r,
-		("Connection: " +++) <$> responseConnection r
-	 ] {- ++
-	map (\(k, v) -> Just $ k +++ ": " +++ v) (responseOthers r) ++
-	[	Just "",
-		Just $ responseBody r
-	 ] -}
+showResponse :: HandleLike h => h -> Response h -> HandleMonad h [Maybe BS.ByteString]
+showResponse h r = do
+	let	hd = [
+			Just $ showVersion (responseVersion r) +++ " " +++
+				showStatusCode (responseStatusCode r),
+			Just $ "Date: " +++ maybe "" showTime (responseDate r),
+			("Content-Length: " +++) . showContentLength <$>
+				responseContentLength r,
+			("Transfer-Encoding: " +++) . showTransferEncoding <$>
+				responseTransferEncoding r,
+			Just $ "Content-Type: " +++
+				showContentType (responseContentType r),
+			("Server: " +++) . BSC.unwords . map showProduct <$> responseServer r,
+			("Last-Modified: " +++) . showTime <$> responseLastModified r,
+			("ETag: " +++) <$> responseETag r,
+			("Accept-Ranges: " +++) <$> responseAcceptRanges r,
+			("Connection: " +++) <$> responseConnection r
+			] ++
+			map (\(k, v) -> Just $ k +++ ": " +++ v) (responseOthers r) ++
+			[ Just "" ]
+--		Just $ responseBody r
+		p = responseBody r
+	((hd ++) . (: []) . Just . BS.concat . fromJust) `liftM` runPipe (p =$= toList)
+
 
 data StatusCode
 	= Continue

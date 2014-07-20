@@ -36,8 +36,8 @@ getRequest cl = do
 	return r
 
 putResponse :: HandleLike h => h -> LBS.ByteString -> HandleMonad h ()
-putResponse cl cnt = hlPutStrLn cl . crlf . catMaybes . showResponse . mkContents
-	. mkChunked $ LBS.toChunks cnt
+putResponse cl cnt = hlPutStrLn cl . crlf . catMaybes =<< showResponse cl (mkContents
+	. mkChunked $ LBS.toChunks cnt)
 
 httpContent :: HandleLike h =>
 	h -> Maybe Int -> Pipe () BS.ByteString (HandleMonad h) ()
@@ -65,7 +65,7 @@ mkChunked (b : bs) = BSC.pack (showHex (BS.length b) "") `BS.append` "\r\n"
 	`BS.append` b `BS.append` "\r\n" `BS.append` mkChunked bs
 	-}
 
-mkContents :: BS.ByteString -> Response
+mkContents :: HandleLike h => BS.ByteString -> Response h
 mkContents cnt = Response {
 	responseVersion = Version 1 1,
 	responseStatusCode = OK,

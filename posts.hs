@@ -31,4 +31,4 @@ main = do
 	return ()
 
 printP :: MonadIO m => Pipe BSC.ByteString () m ()
-printP = await >>= maybe (return ()) (\s -> liftIO (BSC.putStrLn s) >> printP)
+printP = await >>= maybe (return ()) (\s -> liftIO (BSC.putStr s) >> printP)

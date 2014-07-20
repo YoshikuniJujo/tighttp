@@ -34,8 +34,8 @@ httpGet = gets fst >>= \sv -> do
 	lift . hlPutStrLn sv . request =<< gets snd
 	src <- lift $ hGetHeader sv
 	let res = parseResponse src
-	lift . mapM_ (hlDebug sv "critical" . (`BS.append` "\n") . BS.take 100)
-		. catMaybes $ showResponse res
+	lift $ mapM_ (hlDebug sv "critical" . (`BS.append` "\n") . BS.take 100)
+		. catMaybes =<< showResponse sv res
 	return (httpContent (contentLength <$> responseContentLength res) sv)
 
 httpContent_ :: HandleLike h => Maybe Int -> Pipe () BS.ByteString (ClientM h) ()
@@ -82,7 +82,7 @@ httpPost_ cnt = gets fst >>= \sv -> do
 	let pst = mkChunked $ LBS.toChunks cnt
 	lift . hlPutStrLn sv . requestToString . flip post pst =<< gets snd
 	res <- lift $ parseResponse `liftM` hGetHeader sv
-	lift . hlDebug sv "critical" $ responseToString res
+	lift $ hlDebug sv "critical" =<< responseToString sv res
 	return . httpContent_ $ contentLength <$> responseContentLength res
 
 mkChunked :: [BS.ByteString] -> BS.ByteString
@@ -114,8 +114,8 @@ request hnpn = crlf . catMaybes . showRequest . RequestGet (Uri "/") (Version 1 
 requestToString :: Request -> BS.ByteString
 requestToString = crlf . catMaybes . showRequest
 
-responseToString :: Response -> BS.ByteString
-responseToString = crlf . catMaybes . showResponse
+responseToString :: HandleLike h => h -> Response h -> HandleMonad h BS.ByteString
+responseToString h c = (crlf . catMaybes) `liftM` showResponse h c
 
 post :: Maybe (BS.ByteString, Int) -> BS.ByteString -> Request
 post hnpn cnt = RequestPost (Uri "/") (Version 1 1)
