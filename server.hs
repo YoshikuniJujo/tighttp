@@ -17,9 +17,10 @@ main = do
 	let port = PortNumber $ fromIntegral pn
 	socket <- listenOn port
 	forever $ do
-		(client, _, _) <- accept socket
+		(cl, _, _) <- accept socket
 		_ <- forkIO $ do
-			ret <- httpServer client $ LBS.fromChunks [
+			ret <- getRequest cl
+			putResponse cl $ LBS.fromChunks [
 				"Good afternoon, world!\n",
 				"Good night, world!\n" ]
 			print =<< runPipe (ret =$= toList)

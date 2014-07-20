@@ -1,7 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables, OverloadedStrings, PackageImports #-}
 
 module Network.TigHTTP.Server (
-	httpServer,
+	getRequest, putResponse,
 	ContentType(..), Type(..), Subtype(..), Parameter(..), Charset(..),
 	) where
 
@@ -13,7 +13,6 @@ import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as LBS
 import Data.Time
 import Data.Pipe
-import Data.Pipe.List
 import System.Locale
 
 import Network.TigHTTP.HttpTypes
@@ -21,16 +20,9 @@ import Data.HandleLike
 
 import Numeric
 
-{-
-httpServer :: HandleLike h => h -> LBS.ByteString -> HandleMonad h BS.ByteString
-httpServer cl cnt = do
-	p <- httpServer_ cl cnt
-	(BS.concat . fromJust) `liftM` runPipe (p =$= toList)
-	-}
-
-httpServer :: HandleLike h => h ->
-	LBS.ByteString -> HandleMonad h (Pipe () BS.ByteString (HandleMonad h) ())
-httpServer cl cnt = do
+getRequest :: HandleLike h =>
+	h -> HandleMonad h (Pipe () BS.ByteString (HandleMonad h) ())
+getRequest cl = do
 	h <- hlGetHeader cl
 	let req = parseReq h
 	r <- case req of
@@ -40,9 +32,11 @@ httpServer cl cnt = do
 	hlDebug cl "critical" . BSC.pack . (++ "\n") $ show req
 	mapM_ (hlDebug cl "critical" . (`BS.append` "\n")) .
 		catMaybes . showRequest $ req
-	hlPutStrLn cl . crlf . catMaybes . showResponse . mkContents . mkChunked
-		$ LBS.toChunks cnt
 	return r
+
+putResponse :: HandleLike h => h -> LBS.ByteString -> HandleMonad h ()
+putResponse cl cnt = hlPutStrLn cl . crlf . catMaybes . showResponse . mkContents
+	. mkChunked $ LBS.toChunks cnt
 
 httpContent :: HandleLike h =>
 	h -> Maybe Int -> Pipe () BS.ByteString (HandleMonad h) ()

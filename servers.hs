@@ -33,7 +33,8 @@ main = do
 		_ <- liftIO . forkIO . (`run` g) $ do
 			cl <- open client ["TLS_RSA_WITH_AES_128_CBC_SHA"] [(k, c)]
 				Nothing
-			ret <- httpServer cl "Good afternoon, world!\n"
+			ret <- getRequest cl
+			putResponse cl "Good afternoon, world!\n"
 			bs <- (BS.concat . fromJust) `liftM` runPipe (ret =$= toList)
 			hlDebug cl "critical" bs
 			hlClose cl
