@@ -36,26 +36,28 @@ import Data.HandleLike
 (-:-) :: Char -> BS.ByteString -> BS.ByteString
 (-:-) = BSC.cons
 
-data Request
+data Request h
 	= RequestGet Uri Version Get
-	| RequestPost Uri Version Post
+	| RequestPost Uri Version (Post h)
 	| RequestRaw RequestType Uri Version [(BS.ByteString, BS.ByteString)]
-	deriving Show
 
-requestBodyLength :: Request -> Maybe Int
+requestBodyLength :: Request h -> Maybe Int
 requestBodyLength (RequestPost _ _ p) = contentLength <$> postContentLength p
 requestBodyLength _ = Nothing
 
-postAddBody :: Request -> BS.ByteString -> Request
-postAddBody (RequestPost u v p) b = RequestPost u v $ p { postBody = b }
+postAddBody :: HandleLike h => Request h -> BS.ByteString -> Request h
+postAddBody (RequestPost u v p) b = RequestPost u v $ p { postBody = pp }
+	where
+	pp = fromList [b]
 postAddBody r _ = r
 
-getPostBody :: Request -> BS.ByteString
-getPostBody (RequestPost _ _ p) = postBody p
-getPostBody _ = ""
+getPostBody :: HandleLike h => Request h -> HandleMonad h BS.ByteString
+getPostBody (RequestPost _ _ p) =
+	(BS.concat . fromJust) `liftM` runPipe (postBody p =$= toList)
+getPostBody _ = return ""
 
-showRequest :: Request -> [Maybe BS.ByteString]
-showRequest (RequestGet uri vsn g) = [
+showRequest :: HandleLike h => h -> Request h -> HandleMonad h [Maybe BS.ByteString]
+showRequest _ (RequestGet uri vsn g) = return [
 	Just $ "GET " +++ showUri uri +++ " " +++ showVersion vsn,
 	("Host: " +++) . showHost <$> getHost g,
 	("User-Agent: " +++) . BSC.unwords . map showProduct <$> getUserAgent g,
@@ -70,26 +72,28 @@ showRequest (RequestGet uri vsn g) = [
 		map showCacheControl <$> getCacheControl g,
 	Just ""
  ]
-showRequest (RequestPost uri vsn p) = [
-	Just $ "POST " +++ showUri uri +++ " " +++ showVersion vsn,
-	("Host: " +++) . showHost <$> postHost p,
-	("User-Agent: " +++) . BSC.unwords . map showProduct <$> postUserAgent p,
-	("Accept: " +++) . BSC.intercalate "," . map showAccept <$> postAccept p,
-	("Accept-Language: " +++) . BSC.intercalate "," .
-		map showAcceptLanguage <$> postAcceptLanguage p,
-	("Accept-Encoding: " +++) . BSC.intercalate "," .
-		map showAcceptEncoding <$> postAcceptEncoding p,
-	("Connection: " +++) . BSC.intercalate "," .
-		map showConnection <$> postConnection p,
-	("Cache-Control: " +++) . BSC.intercalate "," .
-		map showCacheControl <$> postCacheControl p,
-	("Content-Type: " +++) .  showContentType <$> postContentType p,
-	("Content-Length: " +++) .  showContentLength <$> postContentLength p
- ] ++ map (\(k, v) -> Just $ k +++ ": " +++ v) (postOthers p) ++ [
- 	Just "",
-	Just $ postBody p
- ]
-showRequest (RequestRaw rt uri vsn kvs) = [
+showRequest _ (RequestPost uri vsn p) = do
+	let hd = [
+		Just $ "POST " +++ showUri uri +++ " " +++ showVersion vsn,
+		("Host: " +++) . showHost <$> postHost p,
+		("User-Agent: " +++) . BSC.unwords . map showProduct <$> postUserAgent p,
+		("Accept: " +++) . BSC.intercalate "," . map showAccept <$> postAccept p,
+		("Accept-Language: " +++) . BSC.intercalate "," .
+			map showAcceptLanguage <$> postAcceptLanguage p,
+		("Accept-Encoding: " +++) . BSC.intercalate "," .
+			map showAcceptEncoding <$> postAcceptEncoding p,
+		("Connection: " +++) . BSC.intercalate "," .
+			map showConnection <$> postConnection p,
+		("Cache-Control: " +++) . BSC.intercalate "," .
+			map showCacheControl <$> postCacheControl p,
+		("Content-Type: " +++) .  showContentType <$> postContentType p,
+		("Content-Length: " +++) .  showContentLength <$> postContentLength p
+		] ++ map (\(k, v) -> Just $ k +++ ": " +++ v) (postOthers p) ++ [
+ 			Just "" ]
+	b <- (BS.concat <$>) `liftM` runPipe (postBody p =$= toList)
+	return $ hd ++ [b]
+--	Just $ postBody p
+showRequest _ (RequestRaw rt uri vsn kvs) = return $ [
 	Just $ showRequestType rt +++ " " +++ showUri uri +++ " " +++ showVersion vsn
  ] ++ map (\(k, v) -> Just $ k +++ ": " +++ v) kvs ++ [ Just "" ]
 
@@ -104,7 +108,7 @@ data Get = Get {
 	getOthers :: [(BS.ByteString, BS.ByteString)]
  } deriving Show
 
-data Post = Post {
+data Post h = Post {
 	postHost :: Maybe Host,
 	postUserAgent :: Maybe [Product],
 	postAccept :: Maybe [Accept],
@@ -116,8 +120,8 @@ data Post = Post {
 	postContentLength :: Maybe ContentLength,
 	postTransferEncoding :: Maybe TransferEncoding,
 	postOthers :: [(BS.ByteString, BS.ByteString)],
-	postBody :: BS.ByteString
- } deriving Show
+	postBody :: Pipe () BS.ByteString (HandleMonad h) ()
+	}
 
 data RequestType
 	= RequestTypeGet
@@ -141,7 +145,7 @@ showVersion :: Version -> BS.ByteString
 showVersion (Version vmjr vmnr) =
 	"HTTP/" +++ BSC.pack (show vmjr) +++ "." +++ BSC.pack (show vmnr)
 
-parseReq :: [BS.ByteString] -> Request
+parseReq :: HandleLike h => [BS.ByteString] -> Request h
 parseReq (h : t) = let
 	(rt, uri, v) = parseRequestLine h in
 	parseSep rt uri v $ map separate t
@@ -152,7 +156,8 @@ parseReq (h : t) = let
 			_ -> error "parse: bad"
 parseReq [] = error "parse: bad request"
 
-parseSep :: RequestType -> Uri -> Version -> [(BS.ByteString, BS.ByteString)] -> Request
+parseSep :: HandleLike h => RequestType ->
+	Uri -> Version -> [(BS.ByteString, BS.ByteString)] -> Request h
 parseSep RequestTypeGet uri v kvs = RequestGet uri v $ parseGet kvs
 parseSep RequestTypePost uri v kvs = RequestPost uri v $ parsePost kvs
 parseSep rt uri v kvs = RequestRaw rt uri v kvs
@@ -190,7 +195,7 @@ parseGet kvs = Get {
 	getOthers = filter ((`notElem` getKeys) . fst) kvs
  }
 
-parsePost :: [(BS.ByteString, BS.ByteString)] -> Post
+parsePost :: HandleLike h => [(BS.ByteString, BS.ByteString)] -> Post h
 parsePost kvs = Post {
 	postHost = parseHost <$> lookup "Host" kvs,
 	postUserAgent = map parseProduct . sepTkn <$> lookup "User-Agent" kvs,
@@ -210,7 +215,7 @@ parsePost kvs = Post {
 		Nothing -> Nothing
 		_ -> error "bad Transfer-Encoding",
 	postOthers = filter ((`notElem` postKeys) . fst) kvs,
-	postBody = ""
+	postBody = return ()
  }
 
 postKeys :: [BS.ByteString]

@@ -3,6 +3,7 @@
 module Network.TigHTTP.Server (
 	getRequest, putResponse,
 	ContentType(..), Type(..), Subtype(..), Parameter(..), Charset(..),
+	Request(..), Get(..), Post(..),
 	) where
 
 import Control.Monad
@@ -30,9 +31,9 @@ getRequest cl = do
 		RequestPost {} -> return . httpContent cl $
 			requestBodyLength req
 		_ -> return (return ())
-	hlDebug cl "critical" . BSC.pack . (++ "\n") $ show req
+--	hlDebug cl "critical" . BSC.pack . (++ "\n") $ show req
 	mapM_ (hlDebug cl "critical" . (`BS.append` "\n")) .
-		catMaybes . showRequest $ req
+		catMaybes =<< showRequest cl req
 	return r
 
 putResponse :: HandleLike h => h -> LBS.ByteString -> HandleMonad h ()
