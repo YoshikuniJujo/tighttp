@@ -1,6 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables, OverloadedStrings, PackageImports #-}
 
-import "monads-tf" Control.Monad.Trans
+-- import "monads-tf" Control.Monad.Trans
+import "monads-tf" Control.Monad.State
 import Data.Pipe
 import System.Environment
 import Network
@@ -16,7 +17,7 @@ main = do
 	sv <- connectTo addr (PortNumber $ fromIntegral pn)
 	p <- run sv $ do
 		setHost (BSC.pack addr) 80
-		httpGet
+		httpGet . request =<< gets snd
 	_ <- runPipe $ responseBody p =$= printP
 	return ()
 

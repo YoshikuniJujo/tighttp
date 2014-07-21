@@ -24,7 +24,6 @@ import Data.HandleLike
 import Numeric
 
 getRequest :: HandleLike h => h -> HandleMonad h (Request h)
---	h -> HandleMonad h (Pipe () BS.ByteString (HandleMonad h) ())
 getRequest cl = do
 	h <- hlGetHeader cl
 	let req = parseReq h
@@ -32,15 +31,9 @@ getRequest cl = do
 		RequestPost {} -> return . httpContent cl $
 			requestBodyLength req
 		_ -> return (return ())
---	hlDebug cl "critical" . BSC.pack . (++ "\n") $ show req
 	mapM_ (hlDebug cl "critical" . (`BS.append` "\n")) .
 		catMaybes =<< showRequest cl req
-	let req' = putPostBody cl req r
-	return req'
---	return $ requestBody req'
-
--- putPostBody :: Handlelike h =>
---	h -> Request h -> 
+	return $ putPostBody cl req r
 
 putResponse :: HandleLike h => h -> LBS.ByteString -> HandleMonad h ()
 putResponse cl cnt = hlPutStrLn cl . crlf . catMaybes =<< showResponse cl (mkContents

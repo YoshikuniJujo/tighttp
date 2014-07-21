@@ -1,7 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables, OverloadedStrings, PackageImports #-}
 
 module Network.TigHTTP.Client (
-	ClientM, run, setHost, httpGet, httpPost,
+	ClientM, run, setHost, httpGet, request, httpPost,
 	ContentType(..), Type(..), Subtype(..), Parameter(..), Charset(..),
 	Response(..),
 	) where
@@ -30,9 +30,14 @@ run h = (`evalStateT` (h, Nothing))
 setHost :: HandleLike h => BS.ByteString -> Int -> ClientM h ()
 setHost hn pn = modify . second . const $ Just (hn, pn)
 
-httpGet :: HandleLike h => ClientM h (Response h)
-httpGet = gets fst >>= \sv -> do
-	lift . hlPutStrLn sv =<< lift . request sv =<< gets snd
+httpGet' :: HandleLike h => ClientM h (Response h)
+httpGet' = do
+	sv <- gets fst
+	httpGet . request =<< gets snd
+
+httpGet :: HandleLike h => Request h -> ClientM h (Response h)
+httpGet req = gets fst >>= \sv -> do
+	lift . hlPutStrLn sv =<< lift (encodeRequest sv req)
 	src <- lift $ hGetHeader sv
 	let res = parseResponse src
 	lift $ mapM_ (hlDebug sv "critical" . (`BS.append` "\n") . BS.take 100)
@@ -95,9 +100,11 @@ hGetHeader h = do
 crlf :: [BS.ByteString] -> BS.ByteString
 crlf = BS.concat . map (+++ "\r\n")
 
-request :: HandleLike h =>
-	h -> Maybe (BS.ByteString, Int) -> HandleMonad h BS.ByteString
-request h hnpn = (crlf . catMaybes) `liftM` showRequest h (RequestGet (Uri "/") (Version 1 1)
+encodeRequest :: HandleLike h => h -> Request h -> HandleMonad h BS.ByteString
+encodeRequest h req = (crlf . catMaybes) `liftM` showRequest h req
+
+request :: Maybe (BS.ByteString, Int) -> Request h
+request hnpn = (RequestGet (Uri "/") (Version 1 1)
 	Get {
 		getHost = uncurry Host . second Just <$> hnpn,
 		getUserAgent = Just [Product "Mozilla" (Just "5.0")],
