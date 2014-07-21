@@ -113,26 +113,27 @@ putRequest sv (RequestRaw rt uri vsn kvs) = do
 	hlPut sv . crlf $ catMaybes r
 
 data Get = Get {
+	getCacheControl :: Maybe [CacheControl],
+	getConnection :: Maybe [Connection],
+	getAccept :: Maybe [Accept],
+	getAcceptEncoding :: Maybe [AcceptEncoding],
+	getAcceptLanguage :: Maybe [AcceptLanguage],
 	getHost :: Maybe Host,
 	getUserAgent :: Maybe [Product],
-	getAccept :: Maybe [Accept],
-	getAcceptLanguage :: Maybe [AcceptLanguage],
-	getAcceptEncoding :: Maybe [AcceptEncoding],
-	getConnection :: Maybe [Connection],
-	getCacheControl :: Maybe [CacheControl],
 	getOthers :: [(BS.ByteString, BS.ByteString)]
  } deriving Show
 
 data Post h = Post {
+	postCacheControl :: Maybe [CacheControl],
+	postConnection :: Maybe [Connection],
+	postAccept :: Maybe [Accept],
+	postAcceptEncoding :: Maybe [AcceptEncoding],
+	postAcceptLanguage :: Maybe [AcceptLanguage],
 	postHost :: Maybe Host,
 	postUserAgent :: Maybe [Product],
-	postAccept :: Maybe [Accept],
-	postAcceptLanguage :: Maybe [AcceptLanguage],
-	postAcceptEncoding :: Maybe [AcceptEncoding],
-	postConnection :: Maybe [Connection],
-	postCacheControl :: Maybe [CacheControl],
-	postContentType :: Maybe ContentType,
 	postContentLength :: Maybe ContentLength,
+	postContentType :: Maybe ContentType,
+
 	postTransferEncoding :: Maybe TransferEncoding,
 	postOthers :: [(BS.ByteString, BS.ByteString)],
 	postBody :: Pipe () BS.ByteString (HandleMonad h) ()
