@@ -10,6 +10,7 @@ import Network.PeyoTLS.ReadFile
 import "crypto-random" Crypto.Random
 
 import Network.TigHTTP.Client
+import Network.TigHTTP.Types
 
 import qualified Data.ByteString.Char8 as BSC
 

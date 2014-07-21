@@ -15,6 +15,8 @@ module Network.TigHTTP.HttpTypes (
 	Post(..),
 	putPostBody,
 	requestBody,
+
+	AcceptEncoding(..),
 ) where
 
 import Control.Applicative

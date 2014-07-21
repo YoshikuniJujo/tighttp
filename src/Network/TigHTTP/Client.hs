@@ -2,8 +2,8 @@
 
 module Network.TigHTTP.Client (
 	ClientM, run, setHost, httpGet, request, post,
-	Request(..), Response(..),
-	ContentType(..), Type(..), Subtype(..), Parameter(..), Charset(..),
+--	Request(..), Response(..),
+--	ContentType(..), Type(..), Subtype(..), Parameter(..), Charset(..),
 	) where
 
 import Control.Applicative

@@ -9,6 +9,7 @@ import Network
 import qualified Data.ByteString.Char8 as BSC
 
 import Network.TigHTTP.Client
+import Network.TigHTTP.Types
 
 main :: IO ()
 main = do

@@ -2,8 +2,8 @@
 
 module Network.TigHTTP.Server (
 	getRequest, putResponse, response,
-	ContentType(..), Type(..), Subtype(..), Parameter(..), Charset(..),
-	Request(..), Get(..), Post(..),
+--	ContentType(..), Type(..), Subtype(..), Parameter(..), Charset(..),
+--	Request(..), Get(..), Post(..),
 	requestBody,
 	) where
 
@@ -34,9 +34,6 @@ getRequest cl = do
 	mapM_ (hlDebug cl "critical" . (`BS.append` "\n")) .
 		catMaybes =<< showRequest cl req
 	return $ putPostBody cl req r
-
-putResponse' :: HandleLike h => h -> LBS.ByteString -> HandleMonad h ()
-putResponse' cl = putResponse cl . response
 
 response :: HandleLike h => LBS.ByteString -> Response h
 response = mkContents . mkChunked . LBS.toChunks
