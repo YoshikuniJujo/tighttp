@@ -16,7 +16,7 @@ main = do
 	addr : spn : _ <- getArgs
 	(pn :: Int) <- readIO spn
 	sv <- connectTo addr (PortNumber $ fromIntegral pn)
-	p <- httpGet sv . get $ Just (BSC.pack addr, 80)
+	p <- httpGet sv $ get addr 80
 	_ <- runPipe $ responseBody p =$= printP
 	return ()
 

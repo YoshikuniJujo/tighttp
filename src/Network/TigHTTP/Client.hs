@@ -29,8 +29,8 @@ httpGet sv req = do
 		(httpContent (contentLength <$> responseContentLength res) sv)
 	return res'
 
-get :: Maybe (BS.ByteString, Int) -> Request h
-get = request
+get :: String -> Int -> Request h
+get = curry (request . Just) . BSC.pack
 
 encodeRequest :: HandleLike h => h -> Request h -> HandleMonad h BS.ByteString
 encodeRequest h req = (crlf . catMaybes) `liftM` showRequest h req
@@ -66,8 +66,8 @@ readRest h = do
 			"" <- hlGetLine h
 			readRest h
 
-post :: HandleLike h => Maybe (BS.ByteString, Int) -> LBS.ByteString -> Request h
-post hn pst = post_ hn (mkChunked $ LBS.toChunks pst)
+post :: HandleLike h => String -> Int -> LBS.ByteString -> Request h
+post hn pn pst = post_ (Just (BSC.pack hn, pn)) (mkChunked $ LBS.toChunks pst)
 
 mkChunked :: [BS.ByteString] -> BS.ByteString
 mkChunked = flip foldr ("0" `BS.append` "\r\n\r\n") $ \b ->

@@ -25,8 +25,7 @@ main = do
 	g <- cprgCreate <$> createEntropyPool :: IO SystemRNG
 	_ <- (`P.run` g) $ do
 		t <- P.open sv ["TLS_RSA_WITH_AES_128_CBC_SHA"] [] ca
-		p <- httpGet t . flip post "I am client.\n" $
-			Just (BSC.pack addr, pn)
+		p <- httpGet t $ post addr pn "I am client.\n"
 		runPipe $ responseBody p =$= printP
 	return ()
 

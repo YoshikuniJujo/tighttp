@@ -16,9 +16,8 @@ main = do
 	addr : spn : _ <- getArgs
 	(pn :: Int) <- readIO spn
 	sv <- connectTo addr (PortNumber $ fromIntegral pn)
-	p <- httpGet sv $ flip post
+	p <- httpGet sv $ post addr pn
 		(LBS.fromChunks ["I am client.\n", "You are server.\n"])
-		(Just (BSC.pack addr, pn))
 	_ <- runPipe $ responseBody p =$= printP
 	return ()
 
