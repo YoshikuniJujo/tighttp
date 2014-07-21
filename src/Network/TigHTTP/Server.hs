@@ -38,9 +38,6 @@ getRequest cl = do
 response :: HandleLike h => LBS.ByteString -> Response h
 response = mkContents . mkChunked . LBS.toChunks
 
-putResponse :: HandleLike h => h -> Response h -> HandleMonad h ()
-putResponse cl res = hlPutStrLn cl . crlf . catMaybes =<< showResponse cl res
-
 httpContent :: HandleLike h =>
 	h -> Maybe Int -> Pipe () BS.ByteString (HandleMonad h) ()
 httpContent h (Just n) = lift (hlGet h n) >>= yield
@@ -89,12 +86,3 @@ hlGetHeader :: HandleLike h => h -> HandleMonad h [BS.ByteString]
 hlGetHeader h = do
 	l <- hlGetLine h
 	if BS.null l then return [] else (l :) `liftM` hlGetHeader h
-
--- dropCR :: BS.ByteString -> BS.ByteString
--- dropCR s = if myLast "dropCR" s == '\r' then BS.init s else s
-
--- crlf :: [BS.ByteString] -> LBS.ByteString
--- crlf = LBS.fromChunks . map (`LBS.append` "\r\n")
-
-crlf :: [BS.ByteString] -> BS.ByteString
-crlf = BS.concat . map (`BS.append` "\r\n")

@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, PackageImports #-}
 
 module Network.TigHTTP.HttpTypes (
 	Version(..),
@@ -9,8 +9,8 @@ module Network.TigHTTP.HttpTypes (
 	ContentType(..), Type(..), Subtype(..), Parameter(..), Charset(..),
 	TransferEncoding(..),
 
-	parseReq, parseResponse, showRequest, showResponse, (+++),
-	myLast, requestBodyLength, postAddBody, getPostBody,
+	parseReq, parseResponse, showRequest, putResponse, (+++),
+	myLast, requestBodyLength, postAddBody,
 
 	Post(..),
 	putPostBody,
@@ -21,6 +21,7 @@ module Network.TigHTTP.HttpTypes (
 
 import Control.Applicative
 import Control.Monad
+import "monads-tf" Control.Monad.Trans
 import Data.Maybe
 import Data.Char
 import qualified Data.ByteString as BS
@@ -64,11 +65,6 @@ requestBody :: HandleLike h => Request h -> Pipe () BS.ByteString (HandleMonad h
 requestBody (RequestPost _ _ p) = postBody p
 requestBody _ = return ()
 
-getPostBody :: HandleLike h => Request h -> HandleMonad h BS.ByteString
-getPostBody (RequestPost _ _ p) =
-	(BS.concat . fromJust) `liftM` runPipe (postBody p =$= toList)
-getPostBody _ = return ""
-
 showRequest :: HandleLike h => h -> Request h -> HandleMonad h [Maybe BS.ByteString]
 showRequest _ (RequestGet uri vsn g) = return [
 	Just $ "GET " +++ showUri uri +++ " " +++ showVersion vsn,
@@ -105,7 +101,6 @@ showRequest _ (RequestPost uri vsn p) = do
  			Just "" ]
 	b <- (BS.concat <$>) `liftM` runPipe (postBody p =$= toList)
 	return $ hd ++ [b]
---	Just $ postBody p
 showRequest _ (RequestRaw rt uri vsn kvs) = return $ [
 	Just $ showRequestType rt +++ " " +++ showUri uri +++ " " +++ showVersion vsn
  ] ++ map (\(k, v) -> Just $ k +++ ": " +++ v) kvs ++ [ Just "" ]
@@ -467,8 +462,8 @@ parseStatusCode sc
 	| ("400", _) <- BSC.span (not . isSpace) sc = BadRequest
 parseStatusCode sc = error $ "parseStatusCode: bad status code: " ++ BSC.unpack sc
 
-showResponse :: HandleLike h => h -> Response h -> HandleMonad h [Maybe BS.ByteString]
-showResponse _ r = do
+putResponse :: HandleLike h => h -> Response h -> HandleMonad h ()
+putResponse cl r = do
 	let	hd = [
 			Just $ showVersion (responseVersion r) +++ " " +++
 				showStatusCode (responseStatusCode r),
@@ -487,10 +482,21 @@ showResponse _ r = do
 			] ++
 			map (\(k, v) -> Just $ k +++ ": " +++ v) (responseOthers r) ++
 			[ Just "" ]
---		Just $ responseBody r
 		p = responseBody r
-	((hd ++) . (: []) . Just . BS.concat . fromJust) `liftM` runPipe (p =$= toList)
+	hlPut cl . crlf $ catMaybes hd
+	_ <- runPipe $ p =$= putAll
+	return ()
+	where
+	putAll = do
+		ms <- await
+		case ms of
+			Just s -> do
+				lift (hlPut cl s >> hlPut cl "\r\n")
+				putAll
+			_ -> return ()
 
+crlf :: [BS.ByteString] -> BS.ByteString
+crlf = BS.concat . map (`BS.append` "\r\n")
 
 data StatusCode
 	= Continue

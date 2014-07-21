@@ -24,8 +24,8 @@ httpGet sv req = do
 	hlPutStrLn sv =<< encodeRequest sv req
 	src <- hGetHeader sv
 	let res = parseResponse src
-	mapM_ (hlDebug sv "critical" . (`BS.append` "\n") . BS.take 100)
-		. catMaybes =<< showResponse sv res
+--	mapM_ (hlDebug sv "critical" . (`BS.append` "\n") . BS.take 100)
+--		. catMaybes =<< showResponse sv res
 	let res' = putResponseBody sv res
 		(httpContent (contentLength <$> responseContentLength res) sv)
 	return res'
