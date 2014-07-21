@@ -20,7 +20,6 @@ module Network.TigHTTP.HttpTypes (
 ) where
 
 import Control.Applicative
-import Control.Monad
 import "monads-tf" Control.Monad.Trans
 import Data.Maybe
 import Data.Char
@@ -66,28 +65,26 @@ requestBody (RequestPost _ _ p) = postBody p
 requestBody _ = return ()
 
 putRequest :: HandleLike h => h -> Request h -> HandleMonad h ()
-putRequest sv req = hlPutStrLn sv =<< encodeRequest sv req
-
-encodeRequest :: HandleLike h => h -> Request h -> HandleMonad h BS.ByteString
-encodeRequest h req = (crlf . catMaybes) `liftM` showRequest h req
-
-showRequest :: HandleLike h => h -> Request h -> HandleMonad h [Maybe BS.ByteString]
-showRequest _ (RequestGet uri vsn g) = return [
-	Just $ "GET " +++ showUri uri +++ " " +++ showVersion vsn,
-	("Host: " +++) . showHost <$> getHost g,
-	("User-Agent: " +++) . BSC.unwords . map showProduct <$> getUserAgent g,
-	("Accept: " +++) . BSC.intercalate "," . map showAccept <$> getAccept g,
-	("Accept-Language: " +++) . BSC.intercalate "," .
-		map showAcceptLanguage <$> getAcceptLanguage g,
-	("Accept-Encoding: " +++) . BSC.intercalate "," .
-		map showAcceptEncoding <$> getAcceptEncoding g,
-	("Connection: " +++) . BSC.intercalate "," .
-		map showConnection <$> getConnection g,
-	("Cache-Control: " +++) . BSC.intercalate "," .
-		map showCacheControl <$> getCacheControl g,
-	Just ""
- ]
-showRequest _ (RequestPost uri vsn p) = do
+putRequest sv (RequestGet uri vsn g) = do
+	let r = [
+		Just $ "GET " +++ showUri uri +++ " " +++ showVersion vsn,
+		("Host: " +++) . showHost <$> getHost g,
+		("User-Agent: " +++) . BSC.unwords .
+			map showProduct <$> getUserAgent g,
+		("Accept: " +++) . BSC.intercalate "," .
+			map showAccept <$> getAccept g,
+		("Accept-Language: " +++) . BSC.intercalate "," .
+			map showAcceptLanguage <$> getAcceptLanguage g,
+		("Accept-Encoding: " +++) . BSC.intercalate "," .
+			map showAcceptEncoding <$> getAcceptEncoding g,
+		("Connection: " +++) . BSC.intercalate "," .
+			map showConnection <$> getConnection g,
+		("Cache-Control: " +++) . BSC.intercalate "," .
+			map showCacheControl <$> getCacheControl g,
+		Just ""
+		]
+	hlPut sv . crlf $ catMaybes r
+putRequest sv (RequestPost uri vsn p) = do
 	let hd = [
 		Just $ "POST " +++ showUri uri +++ " " +++ showVersion vsn,
 		("Host: " +++) . showHost <$> postHost p,
@@ -105,11 +102,15 @@ showRequest _ (RequestPost uri vsn p) = do
 		("Content-Length: " +++) .  showContentLength <$> postContentLength p
 		] ++ map (\(k, v) -> Just $ k +++ ": " +++ v) (postOthers p) ++ [
  			Just "" ]
-	b <- (BS.concat <$>) `liftM` runPipe (postBody p =$= toList)
-	return $ hd ++ [b]
-showRequest _ (RequestRaw rt uri vsn kvs) = return $ [
-	Just $ showRequestType rt +++ " " +++ showUri uri +++ " " +++ showVersion vsn
- ] ++ map (\(k, v) -> Just $ k +++ ": " +++ v) kvs ++ [ Just "" ]
+	hlPut sv . crlf $ catMaybes hd
+	_ <- runPipe $ postBody p =$= putAll sv
+	return ()
+putRequest sv (RequestRaw rt uri vsn kvs) = do
+	let r = [
+		Just $ showRequestType rt +++
+			" " +++ showUri uri +++ " " +++ showVersion vsn ] ++
+		map (\(k, v) -> Just $ k +++ ": " +++ v) kvs ++ [ Just "" ]
+	hlPut sv . crlf $ catMaybes r
 
 data Get = Get {
 	getHost :: Maybe Host,
@@ -490,16 +491,17 @@ putResponse cl r = do
 			[ Just "" ]
 		p = responseBody r
 	hlPut cl . crlf $ catMaybes hd
-	_ <- runPipe $ p =$= putAll
+	_ <- runPipe $ p =$= putAll cl
 	return ()
-	where
-	putAll = do
-		ms <- await
-		case ms of
-			Just s -> do
-				lift (hlPut cl s >> hlPut cl "\r\n")
-				putAll
-			_ -> return ()
+
+putAll :: HandleLike h => h -> Pipe BS.ByteString () (HandleMonad h) ()
+putAll cl = do
+	ms <- await
+	case ms of
+		Just s -> do
+			lift (hlPut cl s >> hlPut cl "\r\n")
+			putAll cl
+		_ -> return ()
 
 crlf :: [BS.ByteString] -> BS.ByteString
 crlf = BS.concat . map (`BS.append` "\r\n")
