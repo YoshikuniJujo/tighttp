@@ -27,7 +27,7 @@ main = do
 	g <- cprgCreate <$> createEntropyPool :: IO SystemRNG
 	(`P.run` g) $ do
 		t <- P.open sv ["TLS_RSA_WITH_AES_128_CBC_SHA"] [] ca
-		p <- httpGet t $ get addr 443
+		p <- request t $ get addr 443
 		_ <- runPipe $ responseBody p =$= takeP 1 =$= printP
 		return ()
 

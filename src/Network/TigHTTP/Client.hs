@@ -1,6 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables, OverloadedStrings, PackageImports #-}
 
-module Network.TigHTTP.Client (httpGet, get, post) where
+module Network.TigHTTP.Client (request, get, post) where
 
 import Control.Applicative
 import Control.Arrow hiding ((+++))
@@ -18,7 +18,8 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as LBS
 
-httpGet :: HandleLike h => h -> Request h -> HandleMonad h (Response h)
+request, httpGet :: HandleLike h => h -> Request h -> HandleMonad h (Response h)
+request = httpGet
 httpGet sv req = do
 	hlPutStrLn sv =<< encodeRequest sv req
 	src <- hGetHeader sv
@@ -30,7 +31,7 @@ httpGet sv req = do
 	return res'
 
 get :: String -> Int -> Request h
-get = curry (request . Just) . BSC.pack
+get = curry (request_ . Just) . BSC.pack
 
 encodeRequest :: HandleLike h => h -> Request h -> HandleMonad h BS.ByteString
 encodeRequest h req = (crlf . catMaybes) `liftM` showRequest h req
@@ -82,8 +83,8 @@ hGetHeader h = do
 crlf :: [BS.ByteString] -> BS.ByteString
 crlf = BS.concat . map (+++ "\r\n")
 
-request :: Maybe (BS.ByteString, Int) -> Request h
-request hnpn = RequestGet (Uri "/") (Version 1 1)
+request_ :: Maybe (BS.ByteString, Int) -> Request h
+request_ hnpn = RequestGet (Uri "/") (Version 1 1)
 	Get {
 		getHost = uncurry Host . second Just <$> hnpn,
 		getUserAgent = Just [Product "Mozilla" (Just "5.0")],
