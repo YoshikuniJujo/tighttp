@@ -126,6 +126,7 @@ data Get = Get {
 data Post h = Post {
 	postCacheControl :: Maybe [CacheControl],
 	postConnection :: Maybe [Connection],
+	postTransferEncoding :: Maybe TransferEncoding,
 	postAccept :: Maybe [Accept],
 	postAcceptEncoding :: Maybe [AcceptEncoding],
 	postAcceptLanguage :: Maybe [AcceptLanguage],
@@ -133,11 +134,8 @@ data Post h = Post {
 	postUserAgent :: Maybe [Product],
 	postContentLength :: Maybe ContentLength,
 	postContentType :: Maybe ContentType,
-
-	postTransferEncoding :: Maybe TransferEncoding,
 	postOthers :: [(BS.ByteString, BS.ByteString)],
-	postBody :: Pipe () BS.ByteString (HandleMonad h) ()
-	}
+	postBody :: Pipe () BS.ByteString (HandleMonad h) () }
 
 data RequestType
 	= RequestTypeGet
@@ -399,15 +397,15 @@ parseCacheControl cc = CacheControlRaw cc
 data Response h = Response {
 	responseVersion :: Version,
 	responseStatusCode :: StatusCode,
-	responseDate :: Maybe UTCTime,
-	responseContentLength :: Maybe ContentLength,
-	responseTransferEncoding :: Maybe TransferEncoding,
-	responseContentType :: ContentType,
-	responseServer :: Maybe [Product],
-	responseLastModified :: Maybe UTCTime,
-	responseETag :: Maybe BS.ByteString,
-	responseAcceptRanges :: Maybe BS.ByteString,
 	responseConnection :: Maybe BS.ByteString,
+	responseDate :: Maybe UTCTime,
+	responseTransferEncoding :: Maybe TransferEncoding,
+	responseAcceptRanges :: Maybe BS.ByteString,
+	responseETag :: Maybe BS.ByteString,
+	responseServer :: Maybe [Product],
+	responseContentLength :: Maybe ContentLength,
+	responseContentType :: ContentType,
+	responseLastModified :: Maybe UTCTime,
 	responseOthers :: [(BS.ByteString, BS.ByteString)],
 	responseBody :: Pipe () BS.ByteString (HandleMonad h) ()
 	}

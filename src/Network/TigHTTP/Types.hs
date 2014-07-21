@@ -1,13 +1,27 @@
 module Network.TigHTTP.Types (
+	-- * Request and Response
 	Request(..), Get(..), Post(..), Response(..),
-	Uri(..), Version(..), RequestType(..),
-	ContentType(..), Type(..), Subtype(..), Parameter(..),
+
+	-- * Header Types
+
+	-- ** First Line
+	Version(..), Uri(..), RequestType(..), StatusCode(..),
+
+	-- ** General Header
+	CacheControl(..), Connection(..), TransferEncoding(..),
+
+	-- ** Request Header
+	Accept(..), AcceptEncoding(..), AcceptLanguage(..), Host(..),
+
+	-- ** Response Header
+	-- ** Entity Header
+	ContentLength(..), ContentType(..), Type(..), Subtype(..),
+
+	-- ** Basic Types
+	Parameter(..),
 	Charset(..),
 
-	Host(..), Product(..), Accept(..), AcceptLanguage(..),
-	AcceptEncoding(..), Connection(..), CacheControl(..),
-	ContentLength(..), TransferEncoding(..),
-	StatusCode(..),
+	Product(..),
 	Qvalue(..),
 	) where
 
