@@ -1,6 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables, OverloadedStrings, PackageImports #-}
 
-import "monads-tf" Control.Monad.Trans
+import "monads-tf" Control.Monad.State
 import Data.Pipe
 import System.Environment
 import Network
@@ -17,8 +17,9 @@ main = do
 	sv <- connectTo addr (PortNumber $ fromIntegral pn)
 	p <- run sv $ do
 		setHost (BSC.pack addr) pn
-		httpPost $ LBS.fromChunks
-			["I am client.\n", "You are server.\n"]
+		httpGet . flip post
+			(LBS.fromChunks ["I am client.\n", "You are server.\n"])
+			=<< gets snd
 	_ <- runPipe $ responseBody p =$= printP
 	return ()
 

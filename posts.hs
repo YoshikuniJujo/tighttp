@@ -1,7 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables, OverloadedStrings, PackageImports #-}
 
 import Control.Applicative
-import "monads-tf" Control.Monad.Trans
+import "monads-tf" Control.Monad.State
 import Data.Pipe
 import System.Environment
 import Network
@@ -26,7 +26,7 @@ main = do
 		t <- P.open sv ["TLS_RSA_WITH_AES_128_CBC_SHA"] [] ca
 		p <- run t $ do
 			setHost (BSC.pack addr) pn
-			httpPost "I am client.\n"
+			httpGet . flip post "I am client.\n" =<< gets snd
 		runPipe $ responseBody p =$= printP
 	return ()
 
