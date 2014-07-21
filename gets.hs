@@ -1,7 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables, OverloadedStrings, PackageImports #-}
 
 import Control.Applicative
-import "monads-tf" Control.Monad.State
+import "monads-tf" Control.Monad.Trans
 import Data.Pipe
 import System.Environment
 import Network
@@ -27,9 +27,7 @@ main = do
 	g <- cprgCreate <$> createEntropyPool :: IO SystemRNG
 	(`P.run` g) $ do
 		t <- P.open sv ["TLS_RSA_WITH_AES_128_CBC_SHA"] [] ca
-		p <- run t $ do
-			setHost (BSC.pack addr) 443
-			httpGet . request =<< gets snd
+		p <- httpGet t . get $ Just (BSC.pack addr, 443)
 		_ <- runPipe $ responseBody p =$= takeP 1 =$= printP
 		return ()
 

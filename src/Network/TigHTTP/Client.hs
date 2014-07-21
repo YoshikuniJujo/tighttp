@@ -1,15 +1,11 @@
 {-# LANGUAGE ScopedTypeVariables, OverloadedStrings, PackageImports #-}
 
-module Network.TigHTTP.Client (
-	ClientM, run, setHost, httpGet, request, post,
---	Request(..), Response(..),
---	ContentType(..), Type(..), Subtype(..), Parameter(..), Charset(..),
-	) where
+module Network.TigHTTP.Client (ClientM, httpGet, get, post) where
 
 import Control.Applicative
 import Control.Arrow hiding ((+++))
 import Control.Monad
-import "monads-tf" Control.Monad.State
+import "monads-tf" Control.Monad.State (lift)
 import Data.Maybe
 import Data.Pipe
 import Data.Pipe.List
@@ -22,24 +18,21 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as LBS
 
-type ClientM h = StateT (h, Maybe (BS.ByteString, Int)) (HandleMonad h)
+type ClientM h = HandleMonad h
 
-run :: HandleLike h => h -> ClientM h a -> HandleMonad h a
-run h = (`evalStateT` (h, Nothing))
-
-setHost :: HandleLike h => BS.ByteString -> Int -> ClientM h ()
-setHost hn pn = modify . second . const $ Just (hn, pn)
-
-httpGet :: HandleLike h => Request h -> ClientM h (Response h)
-httpGet req = gets fst >>= \sv -> do
-	lift . hlPutStrLn sv =<< lift (encodeRequest sv req)
-	src <- lift $ hGetHeader sv
+httpGet :: HandleLike h => h -> Request h -> ClientM h (Response h)
+httpGet sv req = do
+	hlPutStrLn sv =<< encodeRequest sv req
+	src <- hGetHeader sv
 	let res = parseResponse src
-	lift $ mapM_ (hlDebug sv "critical" . (`BS.append` "\n") . BS.take 100)
+	mapM_ (hlDebug sv "critical" . (`BS.append` "\n") . BS.take 100)
 		. catMaybes =<< showResponse sv res
 	let res' = putResponseBody sv res
 		(httpContent (contentLength <$> responseContentLength res) sv)
 	return res'
+
+get :: Maybe (BS.ByteString, Int) -> Request h
+get = request
 
 encodeRequest :: HandleLike h => h -> Request h -> HandleMonad h BS.ByteString
 encodeRequest h req = (crlf . catMaybes) `liftM` showRequest h req
@@ -92,7 +85,7 @@ crlf :: [BS.ByteString] -> BS.ByteString
 crlf = BS.concat . map (+++ "\r\n")
 
 request :: Maybe (BS.ByteString, Int) -> Request h
-request hnpn = (RequestGet (Uri "/") (Version 1 1)
+request hnpn = RequestGet (Uri "/") (Version 1 1)
 	Get {
 		getHost = uncurry Host . second Just <$> hnpn,
 		getUserAgent = Just [Product "Mozilla" (Just "5.0")],
@@ -102,7 +95,7 @@ request hnpn = (RequestGet (Uri "/") (Version 1 1)
 		getConnection = Just [Connection "keep-alive"],
 		getCacheControl = Just [MaxAge 0],
 		getOthers = []
-	 } )
+	 }
 
 post_ :: HandleLike h => Maybe (BS.ByteString, Int) -> BS.ByteString -> Request h
 post_ hnpn cnt = RequestPost (Uri "/") (Version 1 1)
