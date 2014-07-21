@@ -1,7 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables, OverloadedStrings, PackageImports #-}
 
 module Network.TigHTTP.Server (
-	getRequest, putResponse,
+	getRequest, putResponse, response,
 	ContentType(..), Type(..), Subtype(..), Parameter(..), Charset(..),
 	Request(..), Get(..), Post(..),
 	requestBody,
@@ -35,9 +35,14 @@ getRequest cl = do
 		catMaybes =<< showRequest cl req
 	return $ putPostBody cl req r
 
-putResponse :: HandleLike h => h -> LBS.ByteString -> HandleMonad h ()
-putResponse cl cnt = hlPutStrLn cl . crlf . catMaybes =<< showResponse cl (mkContents
-	. mkChunked $ LBS.toChunks cnt)
+putResponse' :: HandleLike h => h -> LBS.ByteString -> HandleMonad h ()
+putResponse' cl = putResponse cl . response
+
+response :: HandleLike h => LBS.ByteString -> Response h
+response = mkContents . mkChunked . LBS.toChunks
+
+putResponse :: HandleLike h => h -> Response h -> HandleMonad h ()
+putResponse cl res = hlPutStrLn cl . crlf . catMaybes =<< showResponse cl res
 
 httpContent :: HandleLike h =>
 	h -> Maybe Int -> Pipe () BS.ByteString (HandleMonad h) ()

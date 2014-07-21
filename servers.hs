@@ -34,7 +34,7 @@ main = do
 			cl <- open client ["TLS_RSA_WITH_AES_128_CBC_SHA"] [(k, c)]
 				Nothing
 			ret <- getRequest cl
-			putResponse cl "Good afternoon, world!\n"
+			putResponse cl $ response "Good afternoon, world!\n"
 			bs <- (BS.concat . fromJust) `liftM` runPipe
 				(requestBody ret =$= toList)
 			hlDebug cl "critical" bs

@@ -20,7 +20,7 @@ main = do
 		(cl, _, _) <- accept socket
 		_ <- forkIO $ do
 			ret <- getRequest cl
-			putResponse cl $ LBS.fromChunks [
+			putResponse cl . response $ LBS.fromChunks [
 				"Good afternoon, world!\n",
 				"Good night, world!\n" ]
 			print =<< runPipe (requestBody ret =$= toList)
