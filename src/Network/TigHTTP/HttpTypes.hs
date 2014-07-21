@@ -9,7 +9,7 @@ module Network.TigHTTP.HttpTypes (
 	ContentType(..), Type(..), Subtype(..), Parameter(..), Charset(..),
 	TransferEncoding(..),
 
-	parseReq, parseResponse, showRequest, putResponse, (+++),
+	parseReq, parseResponse, putRequest, putResponse, (+++),
 	myLast, requestBodyLength, postAddBody,
 
 	Post(..),
@@ -64,6 +64,12 @@ putPostBody _ r _ = r
 requestBody :: HandleLike h => Request h -> Pipe () BS.ByteString (HandleMonad h) ()
 requestBody (RequestPost _ _ p) = postBody p
 requestBody _ = return ()
+
+putRequest :: HandleLike h => h -> Request h -> HandleMonad h ()
+putRequest sv req = hlPutStrLn sv =<< encodeRequest sv req
+
+encodeRequest :: HandleLike h => h -> Request h -> HandleMonad h BS.ByteString
+encodeRequest h req = (crlf . catMaybes) `liftM` showRequest h req
 
 showRequest :: HandleLike h => h -> Request h -> HandleMonad h [Maybe BS.ByteString]
 showRequest _ (RequestGet uri vsn g) = return [

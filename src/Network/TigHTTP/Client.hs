@@ -6,7 +6,6 @@ import Control.Applicative
 import Control.Arrow hiding ((+++))
 import Control.Monad
 import "monads-tf" Control.Monad.State (lift)
-import Data.Maybe
 import Data.Pipe
 import Data.Pipe.List
 import Numeric
@@ -21,7 +20,7 @@ import qualified Data.ByteString.Lazy as LBS
 request, httpGet :: HandleLike h => h -> Request h -> HandleMonad h (Response h)
 request = httpGet
 httpGet sv req = do
-	hlPutStrLn sv =<< encodeRequest sv req
+	putRequest sv req
 	src <- hGetHeader sv
 	let res = parseResponse src
 --	mapM_ (hlDebug sv "critical" . (`BS.append` "\n") . BS.take 100)
@@ -32,9 +31,6 @@ httpGet sv req = do
 
 get :: String -> Int -> Request h
 get = curry (request_ . Just) . BSC.pack
-
-encodeRequest :: HandleLike h => h -> Request h -> HandleMonad h BS.ByteString
-encodeRequest h req = (crlf . catMaybes) `liftM` showRequest h req
 
 putResponseBody :: HandleLike h =>
 	h -> Response h -> Pipe () BS.ByteString (HandleMonad h) () -> Response h
@@ -79,9 +75,6 @@ hGetHeader :: HandleLike h => h -> HandleMonad h [BS.ByteString]
 hGetHeader h = do
 	l <- hlGetLine h
 	if BS.null l then return [] else (l :) `liftM` hGetHeader h
-
-crlf :: [BS.ByteString] -> BS.ByteString
-crlf = BS.concat . map (+++ "\r\n")
 
 request_ :: Maybe (BS.ByteString, Int) -> Request h
 request_ hnpn = RequestGet (Uri "/") (Version 1 1)

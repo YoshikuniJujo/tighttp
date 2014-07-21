@@ -9,7 +9,6 @@ module Network.TigHTTP.Server (
 
 import Control.Monad
 import "monads-tf" Control.Monad.Trans
-import Data.Maybe
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as LBS
@@ -31,8 +30,8 @@ getRequest cl = do
 		RequestPost {} -> return . httpContent cl $
 			requestBodyLength req
 		_ -> return (return ())
-	mapM_ (hlDebug cl "critical" . (`BS.append` "\n")) .
-		catMaybes =<< showRequest cl req
+--	mapM_ (hlDebug cl "critical" . (`BS.append` "\n")) .
+--		catMaybes =<< showRequest cl req
 	return $ putPostBody cl req r
 
 response :: HandleLike h => LBS.ByteString -> Response h
