@@ -23,5 +23,5 @@ main = do
 			putResponse cl $ LBS.fromChunks [
 				"Good afternoon, world!\n",
 				"Good night, world!\n" ]
-			print =<< runPipe (ret =$= toList)
+			print =<< runPipe (requestBody ret =$= toList)
 		return ()

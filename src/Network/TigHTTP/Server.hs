@@ -4,6 +4,7 @@ module Network.TigHTTP.Server (
 	getRequest, putResponse,
 	ContentType(..), Type(..), Subtype(..), Parameter(..), Charset(..),
 	Request(..), Get(..), Post(..),
+	requestBody,
 	) where
 
 import Control.Monad
@@ -22,8 +23,8 @@ import Data.HandleLike
 
 import Numeric
 
-getRequest :: HandleLike h =>
-	h -> HandleMonad h (Pipe () BS.ByteString (HandleMonad h) ())
+getRequest :: HandleLike h => h -> HandleMonad h (Request h)
+--	h -> HandleMonad h (Pipe () BS.ByteString (HandleMonad h) ())
 getRequest cl = do
 	h <- hlGetHeader cl
 	let req = parseReq h
@@ -34,7 +35,12 @@ getRequest cl = do
 --	hlDebug cl "critical" . BSC.pack . (++ "\n") $ show req
 	mapM_ (hlDebug cl "critical" . (`BS.append` "\n")) .
 		catMaybes =<< showRequest cl req
-	return r
+	let req' = putPostBody cl req r
+	return req'
+--	return $ requestBody req'
+
+-- putPostBody :: Handlelike h =>
+--	h -> Request h -> 
 
 putResponse :: HandleLike h => h -> LBS.ByteString -> HandleMonad h ()
 putResponse cl cnt = hlPutStrLn cl . crlf . catMaybes =<< showResponse cl (mkContents

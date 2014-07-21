@@ -35,7 +35,8 @@ main = do
 				Nothing
 			ret <- getRequest cl
 			putResponse cl "Good afternoon, world!\n"
-			bs <- (BS.concat . fromJust) `liftM` runPipe (ret =$= toList)
+			bs <- (BS.concat . fromJust) `liftM` runPipe
+				(requestBody ret =$= toList)
 			hlDebug cl "critical" bs
 			hlClose cl
 		return ()

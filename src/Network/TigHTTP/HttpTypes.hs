@@ -13,6 +13,8 @@ module Network.TigHTTP.HttpTypes (
 	myLast, requestBodyLength, postAddBody, getPostBody,
 
 	Post(..),
+	putPostBody,
+	requestBody,
 ) where
 
 import Control.Applicative
@@ -50,6 +52,15 @@ postAddBody (RequestPost u v p) b = RequestPost u v $ p { postBody = pp }
 	where
 	pp = fromList [b]
 postAddBody r _ = r
+
+putPostBody :: HandleLike h => h -> Request h ->
+	Pipe () BS.ByteString (HandleMonad h) () -> Request h
+putPostBody _ (RequestPost u v p) pp = RequestPost u v $ p { postBody = pp }
+putPostBody _ r _ = r
+
+requestBody :: HandleLike h => Request h -> Pipe () BS.ByteString (HandleMonad h) ()
+requestBody (RequestPost _ _ p) = postBody p
+requestBody _ = return ()
 
 getPostBody :: HandleLike h => Request h -> HandleMonad h BS.ByteString
 getPostBody (RequestPost _ _ p) =
