@@ -1,6 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables, OverloadedStrings, PackageImports #-}
 
-module Network.TigHTTP.Client (ClientM, httpGet, get, post) where
+module Network.TigHTTP.Client (httpGet, get, post) where
 
 import Control.Applicative
 import Control.Arrow hiding ((+++))
@@ -18,9 +18,7 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as LBS
 
-type ClientM h = HandleMonad h
-
-httpGet :: HandleLike h => h -> Request h -> ClientM h (Response h)
+httpGet :: HandleLike h => h -> Request h -> HandleMonad h (Response h)
 httpGet sv req = do
 	hlPutStrLn sv =<< encodeRequest sv req
 	src <- hGetHeader sv
