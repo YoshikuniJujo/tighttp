@@ -502,7 +502,8 @@ putAll cl = do
 	ms <- await
 	case ms of
 		Just s -> do
-			lift (hlPut cl s >> hlPut cl "\r\n")
+--			lift (hlPut cl s >> hlPut cl "\r\n")
+			lift $ hlPut cl s
 			putAll cl
 		_ -> return ()
 

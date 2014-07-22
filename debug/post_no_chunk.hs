@@ -9,18 +9,20 @@ import Network
 
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as LBS
+import qualified Data.ByteString.Lazy.Char8 as LBSC
 
 import Network.TigHTTP.Client
 import Network.TigHTTP.Types
 
 main :: IO ()
 main = do
-	addr : spn : _ <- getArgs
+	addr : spn : pth : pst : _ <- getArgs
 	(pn :: Int) <- readIO spn
 	sv <- flip DebugHandle (Just "low") <$>
 		connectTo addr (PortNumber $ fromIntegral pn)
-	p <- request sv $ post addr pn "/salamander/first/talk.pl"
-		(Just 28, "user=hello&tips=hoge%0ahi+ge")
+	p <- request sv $ post addr pn pth -- "/salamander/first/talk.pl"
+		(Just $ length pst, LBSC.pack pst)
+--		(Just 28, "user=hello&tips=hoge%0ahi+ge")
 --		(LBS.fromChunks ["I am client.\n", "You are server.\n"])
 	_ <- runPipe $ responseBody p =$= printP
 	return ()
