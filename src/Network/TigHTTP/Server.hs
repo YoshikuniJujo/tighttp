@@ -56,14 +56,9 @@ getChunked h = do
 			getChunked h
 
 mkChunked :: [BS.ByteString] -> LBS.ByteString
-mkChunked = flip foldr ("0\r\nr\n") $ \b ->
+mkChunked = flip foldr ("0\r\n\r\n") $ \b ->
 	LBS.append (LBSC.pack (showHex (BS.length b) "") `LBS.append` "\r\n"
 		`LBS.append` LBS.fromStrict b `LBS.append` "\r\n")
-{-
-mkChunked [] = "0" `BS.append` "\r\n\r\n"
-mkChunked (b : bs) = BSC.pack (showHex (BS.length b) "") `BS.append` "\r\n"
-	`BS.append` b `BS.append` "\r\n" `BS.append` mkChunked bs
-	-}
 
 mkContents :: HandleLike h => LBS.ByteString -> Response h
 mkContents cnt = Response {
