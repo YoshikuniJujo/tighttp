@@ -16,6 +16,7 @@ import Data.HandleLike
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as LBS
+import qualified Data.ByteString.Lazy.Char8 as LBSC
 
 request, httpGet :: HandleLike h => h -> Request h -> HandleMonad h (Response h)
 request = httpGet
@@ -94,12 +95,13 @@ post hn pn fp (len, pst) = RequestPost (Uri $ BSC.pack fp) (Version 1 1)
 	hnpn = Just (BSC.pack hn, pn)
 	(cl, ch, cnt) = case len of
 		Just l -> (Just $ ContentLength l, Nothing, LBS.toChunks pst)
-		_ -> (Nothing, Just Chunked, [mkChunked $ LBS.toChunks pst])
+		_ -> (Nothing, Just Chunked,
+			LBS.toChunks . mkChunked $ LBS.toChunks pst)
 
-mkChunked :: [BS.ByteString] -> BS.ByteString
-mkChunked = flip foldr ("0" `BS.append` "\r\n\r\n") $ \b ->
-	BS.append (BSC.pack (showHex (BS.length b) "") `BS.append` "\r\n"
-		`BS.append` b `BS.append` "\r\n")
+mkChunked :: [BS.ByteString] -> LBS.ByteString
+mkChunked = flip foldr ("0\r\n\r\n") $ \b ->
+	LBS.append (LBSC.pack (showHex (BS.length b) "") `LBS.append` "\r\n"
+		`LBS.append` LBS.fromStrict b `LBS.append` "\r\n")
 
 hGetHeader :: HandleLike h => h -> HandleMonad h [BS.ByteString]
 hGetHeader h = do

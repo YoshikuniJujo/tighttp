@@ -12,6 +12,7 @@ import "monads-tf" Control.Monad.Trans
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as LBS
+import qualified Data.ByteString.Lazy.Char8 as LBSC
 import Data.Time
 import Data.Pipe
 import Data.Pipe.List
@@ -53,17 +54,17 @@ getChunked h = do
 			yield r
 			getChunked h
 
-mkChunked :: [BS.ByteString] -> BS.ByteString
-mkChunked = flip foldr ("0" `BS.append` "\r\nr\n") $ \b ->
-	BS.append (BSC.pack (showHex (BS.length b) "") `BS.append` "\r\n"
-		`BS.append` b `BS.append` "\r\n")
+mkChunked :: [BS.ByteString] -> LBS.ByteString
+mkChunked = flip foldr ("0\r\nr\n") $ \b ->
+	LBS.append (LBSC.pack (showHex (BS.length b) "") `LBS.append` "\r\n"
+		`LBS.append` LBS.fromStrict b `LBS.append` "\r\n")
 {-
 mkChunked [] = "0" `BS.append` "\r\n\r\n"
 mkChunked (b : bs) = BSC.pack (showHex (BS.length b) "") `BS.append` "\r\n"
 	`BS.append` b `BS.append` "\r\n" `BS.append` mkChunked bs
 	-}
 
-mkContents :: HandleLike h => BS.ByteString -> Response h
+mkContents :: HandleLike h => LBS.ByteString -> Response h
 mkContents cnt = Response {
 	responseVersion = Version 1 1,
 	responseStatusCode = OK,
@@ -78,7 +79,7 @@ mkContents cnt = Response {
 	responseAcceptRanges = Nothing,
 	responseConnection = Nothing,
 	responseOthers = [],
-	responseBody = fromList [cnt]
+	responseBody = fromList $ LBS.toChunks cnt
  }
 
 hlGetHeader :: HandleLike h => h -> HandleMonad h [BS.ByteString]
