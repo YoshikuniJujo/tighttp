@@ -34,7 +34,7 @@ get :: HostName -> Int -> FilePath -> Request h
 get hn pn fp = RequestGet (Path $ BSC.pack fp) (Version 1 1)
 	Get {
 		getHost = uncurry Host . second Just <$> Just (BSC.pack hn, pn),
-		getUserAgent = Just [Product "Mozilla" (Just "5.0")],
+		getUserAgent = Just [Product "tighttp" (Just "0.0.0.0")],
 		getAccept = Just [Accept ("text", "plain") (Qvalue 1.0)],
 		getAcceptLanguage = Just [AcceptLanguage "ja" (Qvalue 1.0)],
 		getAcceptEncoding = Just [],
@@ -79,7 +79,7 @@ post :: HandleLike h =>
 post hn pn fp (len, pst) = RequestPost (Path $ BSC.pack fp) (Version 1 1)
 	Post {
 		postHost = uncurry Host . second Just <$> hnpn,
-		postUserAgent = Just [Product "Mozilla" (Just "5.0")],
+		postUserAgent = Just [Product "tighttp" (Just "0.0.0.0")],
 		postAccept = Just [Accept ("text", "plain") (Qvalue 1.0)],
 		postAcceptLanguage = Just [AcceptLanguage "ja" (Qvalue 1.0)],
 		postAcceptEncoding = Just [],
