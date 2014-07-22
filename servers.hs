@@ -40,6 +40,6 @@ main = do
 				requestPath ret
 			bs <- (BS.concat . fromJust) `liftM` runPipe
 				(requestBody ret =$= toList)
-			hlDebug cl "critical" bs
+			hlDebug cl "critical" $ bs `BS.append` "\n"
 			hlClose cl
 		return ()

@@ -1,4 +1,5 @@
-{-# LANGUAGE ScopedTypeVariables, OverloadedStrings, PackageImports #-}
+{-# LANGUAGE ScopedTypeVariables, OverloadedStrings, TupleSections,
+	PackageImports #-}
 
 import Control.Applicative
 import "monads-tf" Control.Monad.State
@@ -13,10 +14,11 @@ import Network.TigHTTP.Client
 import Network.TigHTTP.Types
 
 import qualified Data.ByteString.Char8 as BSC
+import qualified Data.ByteString.Lazy as LBS
 
 main :: IO ()
 main = do
-	addr : spn : _ <- getArgs
+	addr : spn : pth : msgs <- getArgs
 	(pn :: Int) <- readIO spn
 	ca <- readCertificateStore [
 		"cacert.sample_pem",
@@ -25,7 +27,8 @@ main = do
 	g <- cprgCreate <$> createEntropyPool :: IO SystemRNG
 	_ <- (`P.run` g) $ do
 		t <- P.open sv ["TLS_RSA_WITH_AES_128_CBC_SHA"] [] ca
-		p <- request t $ post addr pn "/" (Nothing, "I am client.\n")
+		p <- request t . post addr pn pth . (Nothing ,) .
+			LBS.fromChunks $ map BSC.pack msgs
 		runPipe $ responseBody p =$= printP
 	return ()
 
