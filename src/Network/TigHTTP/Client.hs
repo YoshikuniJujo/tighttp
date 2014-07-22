@@ -29,8 +29,8 @@ httpGet sv req = do
 		(httpContent (contentLength <$> responseContentLength res) sv)
 	return res'
 
-get :: FilePath -> String -> Int -> Request h
-get fp hn pn = RequestGet (Uri $ BSC.pack fp) (Version 1 1)
+get :: String -> Int -> FilePath -> Request h
+get hn pn fp = RequestGet (Uri $ BSC.pack fp) (Version 1 1)
 	Get {
 		getHost = uncurry Host . second Just <$> Just (BSC.pack hn, pn),
 		getUserAgent = Just [Product "Mozilla" (Just "5.0")],
