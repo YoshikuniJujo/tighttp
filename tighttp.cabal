@@ -14,7 +14,43 @@ license-file:	LICENSE
 category:	Network
 Synopsis:	Tiny and Incrementally-Growing HTTP library
 description:
-    Comming soon.
+    Example programs
+    .
+    examples/get.hs
+    .
+    This is simple client.
+    This send GET request and show page source.
+    Run as following.
+    .
+    > runhaskell get.hs hackage.haskell.org /packages/
+    .
+    extensions
+    .
+    * PackageImports
+    .
+    > import "monads-tf" Control.Monad.Trans
+    > import Data.Pipe
+    > import System.Environment
+    > import Network
+    > import Network.TigHTTP.Client
+    > import Network.TigHTTP.Types
+    > 
+    > import qualified Data.ByteString as BS
+    > 
+    > main :: IO ()
+    > main = do
+    > 	addr : pth : _ <- getArgs
+    > 	sv <- connectTo addr $ PortNumber 80
+    > 	p <- request sv $ get addr 80 pth
+    > 	_ <- runPipe $ responseBody p =$= finally printP (putStrLn "")
+    > 	return ()
+    > 
+    > printP :: MonadIO m => Pipe BS.ByteString () m ()
+    > printP = await >>= maybe (return ()) (\s -> liftIO (BS.putStr s) >> printP)
+    .
+
+extra-source-files:
+    examples/get.hs
 
 source-repository	head
     type:	git
