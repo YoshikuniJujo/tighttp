@@ -83,6 +83,7 @@ putRequest sv (RequestGet uri vsn g) = do
 			map showCacheControl <$> getCacheControl g,
 		Just ""
 		]
+	hlDebug sv "medium" . crlf $ catMaybes r
 	hlPut sv . crlf $ catMaybes r
 putRequest sv (RequestPost uri vsn p) = do
 	let hd = [

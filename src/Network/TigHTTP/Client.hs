@@ -29,8 +29,18 @@ httpGet sv req = do
 		(httpContent (contentLength <$> responseContentLength res) sv)
 	return res'
 
-get :: String -> Int -> Request h
-get = curry (request_ . Just) . BSC.pack
+get :: FilePath -> String -> Int -> Request h
+get fp hn pn = RequestGet (Uri $ BSC.pack fp) (Version 1 1)
+	Get {
+		getHost = uncurry Host . second Just <$> Just (BSC.pack hn, pn),
+		getUserAgent = Just [Product "Mozilla" (Just "5.0")],
+		getAccept = Just [Accept ("text", "plain") (Qvalue 1.0)],
+		getAcceptLanguage = Just [AcceptLanguage "ja" (Qvalue 1.0)],
+		getAcceptEncoding = Just [],
+		getConnection = Just [Connection "keep-alive"],
+		getCacheControl = Just [MaxAge 0],
+		getOthers = []
+	 }
 
 putResponseBody :: HandleLike h =>
 	h -> Response h -> Pipe () BS.ByteString (HandleMonad h) () -> Response h
@@ -75,19 +85,6 @@ hGetHeader :: HandleLike h => h -> HandleMonad h [BS.ByteString]
 hGetHeader h = do
 	l <- hlGetLine h
 	if BS.null l then return [] else (l :) `liftM` hGetHeader h
-
-request_ :: Maybe (BS.ByteString, Int) -> Request h
-request_ hnpn = RequestGet (Uri "/") (Version 1 1)
-	Get {
-		getHost = uncurry Host . second Just <$> hnpn,
-		getUserAgent = Just [Product "Mozilla" (Just "5.0")],
-		getAccept = Just [Accept ("text", "plain") (Qvalue 1.0)],
-		getAcceptLanguage = Just [AcceptLanguage "ja" (Qvalue 1.0)],
-		getAcceptEncoding = Just [],
-		getConnection = Just [Connection "keep-alive"],
-		getCacheControl = Just [MaxAge 0],
-		getOthers = []
-	 }
 
 post_ :: HandleLike h => Maybe (BS.ByteString, Int) -> BS.ByteString -> Request h
 post_ hnpn cnt = RequestPost (Uri "/") (Version 1 1)
