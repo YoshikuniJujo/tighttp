@@ -15,6 +15,7 @@ module Network.TigHTTP.HttpTypes (
 	Post(..),
 	putPostBody,
 	requestBody,
+	requestPath,
 
 	AcceptEncoding(..),
 	HostName,
@@ -66,6 +67,11 @@ putPostBody _ r _ = r
 requestBody :: HandleLike h => Request h -> Pipe () BS.ByteString (HandleMonad h) ()
 requestBody (RequestPost _ _ p) = postBody p
 requestBody _ = return ()
+
+requestPath :: Request h -> Uri
+requestPath (RequestGet p _ _) = p
+requestPath (RequestPost p _ _) = p
+requestPath (RequestRaw _ p _ _) = p
 
 putRequest :: HandleLike h => h -> Request h -> HandleMonad h ()
 putRequest sv (RequestGet uri vsn g) = do

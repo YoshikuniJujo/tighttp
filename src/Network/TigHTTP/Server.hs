@@ -5,6 +5,7 @@ module Network.TigHTTP.Server (
 --	ContentType(..), Type(..), Subtype(..), Parameter(..), Charset(..),
 --	Request(..), Get(..), Post(..),
 	requestBody,
+	requestPath,
 	) where
 
 import Control.Monad
