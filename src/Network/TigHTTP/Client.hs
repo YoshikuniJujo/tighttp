@@ -73,8 +73,9 @@ readRest h = do
 			"" <- hlGetLine h
 			readRest h
 
-post :: HandleLike h => HostName -> Int -> FilePath -> LBS.ByteString -> Request h
-post hn pn fp pst = RequestPost (Uri $ BSC.pack fp) (Version 1 1)
+post :: HandleLike h =>
+	HostName -> Int -> FilePath -> Maybe Int -> LBS.ByteString -> Request h
+post hn pn fp len pst = RequestPost (Uri $ BSC.pack fp) (Version 1 1)
 	Post {
 		postHost = uncurry Host . second Just <$> hnpn,
 		postUserAgent = Just [Product "Mozilla" (Just "5.0")],
@@ -84,14 +85,16 @@ post hn pn fp pst = RequestPost (Uri $ BSC.pack fp) (Version 1 1)
 		postConnection = Just [Connection "keep-alive"],
 		postCacheControl = Just [MaxAge 0],
 		postContentType = Just $ ContentType Text Plain [],
-		postContentLength = Nothing, --Just . ContentLength $ BS.length cnt,
-		postTransferEncoding = Just Chunked,
+		postContentLength = cl,
+		postTransferEncoding = ch,
 		postOthers = [],
-		postBody = fromList [cnt]
+		postBody = fromList cnt
 	 }
 	where
 	hnpn = Just (BSC.pack hn, pn)
-	cnt = mkChunked $ LBS.toChunks pst
+	(cl, ch, cnt) = case len of
+		Just l -> (Just $ ContentLength l, Nothing, LBS.toChunks pst)
+		_ -> (Nothing, Just Chunked, [mkChunked $ LBS.toChunks pst])
 
 mkChunked :: [BS.ByteString] -> BS.ByteString
 mkChunked = flip foldr ("0" `BS.append` "\r\n\r\n") $ \b ->
