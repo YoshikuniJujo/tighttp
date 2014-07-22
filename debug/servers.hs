@@ -18,6 +18,7 @@ import Network.TigHTTP.Server
 import "crypto-random" Crypto.Random
 
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Char8 as BSC
 
 main :: IO ()
 main = do
@@ -36,6 +37,8 @@ main = do
 				Nothing
 			ret <- getRequest cl
 			putResponse cl $ response "Good afternoon, world!\n"
+			hlDebug cl "critical" . BSC.pack . (++ "\n") . show $
+				requestPath ret
 			bs <- (BS.concat . fromJust) `liftM` runPipe
 				(requestBody ret =$= toList)
 			hlDebug cl "critical" bs
