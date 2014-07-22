@@ -1,4 +1,5 @@
-{-# LANGUAGE ScopedTypeVariables, OverloadedStrings, PackageImports #-}
+{-# LANGUAGE ScopedTypeVariables, OverloadedStrings, TupleSections,
+	PackageImports #-}
 
 import Control.Applicative
 import "monads-tf" Control.Monad.State
@@ -15,12 +16,12 @@ import Network.TigHTTP.Types
 
 main :: IO ()
 main = do
-	addr : spn : _ <- getArgs
+	addr : spn : pth : msgs <- getArgs
 	(pn :: Int) <- readIO spn
 	sv <- flip DebugHandle (Just "low") <$>
 		connectTo addr (PortNumber $ fromIntegral pn)
-	p <- request sv $ post addr pn "/"
-		(Nothing, LBS.fromChunks ["I am client.\n", "You are server.\n"])
+	p <- request sv . post addr pn pth . (Nothing ,) .
+		LBS.fromChunks $ map BSC.pack msgs -- ["I am client.\n", "You are server.\n"]
 	_ <- runPipe $ responseBody p =$= printP
 	return ()
 
