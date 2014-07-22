@@ -45,7 +45,7 @@ httpContent h _ = getChunked h
 getChunked :: HandleLike h => h -> Pipe () BS.ByteString (HandleMonad h) ()
 getChunked h = do
 	(n :: Int) <- lift $ (fst . head . readHex . BSC.unpack) `liftM` hlGetLine h
-	lift . hlDebug h "critical" . BSC.pack . (++ "\n") $ show n
+	lift . hlDebug h "low" . BSC.pack . (++ "\n") $ show n
 	case n of
 		0 -> return ()
 		_ -> do	r <- lift $ hlGet h n
