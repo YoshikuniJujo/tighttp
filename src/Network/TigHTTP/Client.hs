@@ -73,21 +73,8 @@ readRest h = do
 			"" <- hlGetLine h
 			readRest h
 
-post :: HandleLike h => String -> Int -> LBS.ByteString -> Request h
-post hn pn pst = post_ (Just (BSC.pack hn, pn)) (mkChunked $ LBS.toChunks pst)
-
-mkChunked :: [BS.ByteString] -> BS.ByteString
-mkChunked = flip foldr ("0" `BS.append` "\r\n\r\n") $ \b ->
-	BS.append (BSC.pack (showHex (BS.length b) "") `BS.append` "\r\n"
-		`BS.append` b `BS.append` "\r\n")
-
-hGetHeader :: HandleLike h => h -> HandleMonad h [BS.ByteString]
-hGetHeader h = do
-	l <- hlGetLine h
-	if BS.null l then return [] else (l :) `liftM` hGetHeader h
-
-post_ :: HandleLike h => Maybe (BS.ByteString, Int) -> BS.ByteString -> Request h
-post_ hnpn cnt = RequestPost (Uri "/") (Version 1 1)
+post :: HandleLike h => String -> Int -> FilePath -> LBS.ByteString -> Request h
+post hn pn fp pst = RequestPost (Uri $ BSC.pack fp) (Version 1 1)
 	Post {
 		postHost = uncurry Host . second Just <$> hnpn,
 		postUserAgent = Just [Product "Mozilla" (Just "5.0")],
@@ -102,3 +89,16 @@ post_ hnpn cnt = RequestPost (Uri "/") (Version 1 1)
 		postOthers = [],
 		postBody = fromList [cnt]
 	 }
+	where
+	hnpn = Just (BSC.pack hn, pn)
+	cnt = mkChunked $ LBS.toChunks pst
+
+mkChunked :: [BS.ByteString] -> BS.ByteString
+mkChunked = flip foldr ("0" `BS.append` "\r\n\r\n") $ \b ->
+	BS.append (BSC.pack (showHex (BS.length b) "") `BS.append` "\r\n"
+		`BS.append` b `BS.append` "\r\n")
+
+hGetHeader :: HandleLike h => h -> HandleMonad h [BS.ByteString]
+hGetHeader h = do
+	l <- hlGetLine h
+	if BS.null l then return [] else (l :) `liftM` hGetHeader h
