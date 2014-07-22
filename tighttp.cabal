@@ -36,7 +36,7 @@ description:
     > import Network.TigHTTP.Types
     > 
     > import qualified Data.ByteString as BS
-    > 
+    >
     > main :: IO ()
     > main = do
     > 	addr : pth : _ <- getArgs
@@ -44,13 +44,44 @@ description:
     > 	p <- request sv $ get addr 80 pth
     > 	_ <- runPipe $ responseBody p =$= finally printP (putStrLn "")
     > 	return ()
-    > 
+    >
     > printP :: MonadIO m => Pipe BS.ByteString () m ()
     > printP = await >>= maybe (return ()) (\s -> liftIO (BS.putStr s) >> printP)
     .
+    examples/server.hs
+    .
+    This is simple server.
+    This recieve client's request.
+    And send command line arguments as response.
+    Run as following.
+    .
+    > runhaskell server.hs Hello World I Am TigHTTP
+    .
+    > import Control.Monad
+    > import Control.Concurrent
+    > import System.Environment
+    > import Network
+    > import Network.TigHTTP.Server
+    >
+    > import qualified Data.ByteString.Char8 as BSC
+    > import qualified Data.ByteString.Lazy as LBS
+    >
+    > main :: IO ()
+    > main = do
+    > 	as <- getArgs
+    > 	soc <- listenOn $ PortNumber 80
+    > 	forever $ do
+    > 		(h, _, _) <- accept soc
+    > 		void . forkIO $ do
+    > 			req <- getRequest h
+    > 			print $ requestPath req
+    > 			putResponse h . response . LBS.fromChunks $ map BSC.pack as
+    .
+    If you want more examples. Please see examples directory.
 
 extra-source-files:
     examples/get.hs
+    examples/server.hs
 
 source-repository	head
     type:	git
