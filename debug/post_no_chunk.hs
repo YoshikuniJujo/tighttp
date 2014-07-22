@@ -19,8 +19,8 @@ main = do
 	(pn :: Int) <- readIO spn
 	sv <- flip DebugHandle (Just "low") <$>
 		connectTo addr (PortNumber $ fromIntegral pn)
-	p <- request sv $ post addr pn "/salamander/first/talk.pl" (Just 28)
-		"user=hello&tips=hoge%0ahi+ge"
+	p <- request sv $ post addr pn "/salamander/first/talk.pl"
+		(Just 28, "user=hello&tips=hoge%0ahi+ge")
 --		(LBS.fromChunks ["I am client.\n", "You are server.\n"])
 	_ <- runPipe $ responseBody p =$= printP
 	return ()
