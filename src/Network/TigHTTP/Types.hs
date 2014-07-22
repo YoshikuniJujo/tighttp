@@ -5,7 +5,7 @@ module Network.TigHTTP.Types (
 	-- * Header Types
 
 	-- ** First Line
-	Version(..), Uri(..), RequestType(..), StatusCode(..),
+	Version(..), Path(..), RequestType(..), StatusCode(..),
 
 	-- ** General Header
 	CacheControl(..), Connection(..), TransferEncoding(..),

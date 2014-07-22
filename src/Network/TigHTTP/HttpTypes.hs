@@ -2,7 +2,7 @@
 
 module Network.TigHTTP.HttpTypes (
 	Version(..),
-	Request(..), RequestType(..), Uri(..), Get(..), CacheControl(..),
+	Request(..), RequestType(..), Path(..), Get(..), CacheControl(..),
 	Accept(..), AcceptLanguage(..), Qvalue(..),
 	Host(..), Product(..), Connection(..),
 	Response(..), StatusCode(..), ContentLength(..), contentLength,
@@ -45,9 +45,9 @@ type HostName = String
 (-:-) = BSC.cons
 
 data Request h
-	= RequestGet Uri Version Get
-	| RequestPost Uri Version (Post h)
-	| RequestRaw RequestType Uri Version [(BS.ByteString, BS.ByteString)]
+	= RequestGet Path Version Get
+	| RequestPost Path Version (Post h)
+	| RequestRaw RequestType Path Version [(BS.ByteString, BS.ByteString)]
 
 requestBodyLength :: Request h -> Maybe Int
 requestBodyLength (RequestPost _ _ p) = contentLength <$> postContentLength p
@@ -68,7 +68,7 @@ requestBody :: HandleLike h => Request h -> Pipe () BS.ByteString (HandleMonad h
 requestBody (RequestPost _ _ p) = postBody p
 requestBody _ = return ()
 
-requestPath :: Request h -> Uri
+requestPath :: Request h -> Path
 requestPath (RequestGet p _ _) = p
 requestPath (RequestPost p _ _) = p
 requestPath (RequestRaw _ p _ _) = p
@@ -76,7 +76,7 @@ requestPath (RequestRaw _ p _ _) = p
 putRequest :: HandleLike h => h -> Request h -> HandleMonad h ()
 putRequest sv (RequestGet uri vsn g) = do
 	let r = [
-		Just $ "GET " +++ showUri uri +++ " " +++ showVersion vsn,
+		Just $ "GET " +++ showPath uri +++ " " +++ showVersion vsn,
 		("Host: " +++) . showHost <$> getHost g,
 		("User-Agent: " +++) . BSC.unwords .
 			map showProduct <$> getUserAgent g,
@@ -96,7 +96,7 @@ putRequest sv (RequestGet uri vsn g) = do
 	hlPut sv . crlf $ catMaybes r
 putRequest sv (RequestPost uri vsn p) = do
 	let hd = [
-		Just $ "POST " +++ showUri uri +++ " " +++ showVersion vsn,
+		Just $ "POST " +++ showPath uri +++ " " +++ showVersion vsn,
 		("Host: " +++) . showHost <$> postHost p,
 		("User-Agent: " +++) . BSC.unwords . map showProduct <$> postUserAgent p,
 		("Accept: " +++) . BSC.intercalate "," . map showAccept <$> postAccept p,
@@ -118,7 +118,7 @@ putRequest sv (RequestPost uri vsn p) = do
 putRequest sv (RequestRaw rt uri vsn kvs) = do
 	let r = [
 		Just $ showRequestType rt +++
-			" " +++ showUri uri +++ " " +++ showVersion vsn ] ++
+			" " +++ showPath uri +++ " " +++ showVersion vsn ] ++
 		map (\(k, v) -> Just $ k +++ ": " +++ v) kvs ++ [ Just "" ]
 	hlPut sv . crlf $ catMaybes r
 
@@ -158,10 +158,10 @@ showRequestType RequestTypeGet = "GET"
 showRequestType RequestTypePost = "POST"
 showRequestType (RequestTypeRaw rt) = rt
 
-data Uri = Uri BS.ByteString deriving Show
+data Path = Path BS.ByteString deriving Show
 
-showUri :: Uri -> BS.ByteString
-showUri (Uri uri) = uri
+showPath :: Path -> BS.ByteString
+showPath (Path uri) = uri
 
 data Version = Version Int Int deriving Show
 
@@ -181,19 +181,19 @@ parseReq (h : t) = let
 parseReq [] = error "parse: bad request"
 
 parseSep :: HandleLike h => RequestType ->
-	Uri -> Version -> [(BS.ByteString, BS.ByteString)] -> Request h
+	Path -> Version -> [(BS.ByteString, BS.ByteString)] -> Request h
 parseSep RequestTypeGet uri v kvs = RequestGet uri v $ parseGet kvs
 parseSep RequestTypePost uri v kvs = RequestPost uri v $ parsePost kvs
 parseSep rt uri v kvs = RequestRaw rt uri v kvs
 
-parseRequestLine :: BS.ByteString -> (RequestType, Uri, Version)
+parseRequestLine :: BS.ByteString -> (RequestType, Path, Version)
 parseRequestLine rl = let
 	[rts, uris, vs] = BSC.words rl
 	rt = case rts of
 		"GET" -> RequestTypeGet
 		"POST" -> RequestTypePost
 		_ -> RequestTypeRaw rts in
-	(rt, Uri uris, parseVersion vs)
+	(rt, Path uris, parseVersion vs)
 
 parseVersion :: BS.ByteString -> Version
 parseVersion httpVns

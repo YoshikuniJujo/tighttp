@@ -31,7 +31,7 @@ httpGet sv req = do
 	return res'
 
 get :: HostName -> Int -> FilePath -> Request h
-get hn pn fp = RequestGet (Uri $ BSC.pack fp) (Version 1 1)
+get hn pn fp = RequestGet (Path $ BSC.pack fp) (Version 1 1)
 	Get {
 		getHost = uncurry Host . second Just <$> Just (BSC.pack hn, pn),
 		getUserAgent = Just [Product "Mozilla" (Just "5.0")],
@@ -76,7 +76,7 @@ readRest h = do
 
 post :: HandleLike h =>
 	HostName -> Int -> FilePath -> (Maybe Int, LBS.ByteString) -> Request h
-post hn pn fp (len, pst) = RequestPost (Uri $ BSC.pack fp) (Version 1 1)
+post hn pn fp (len, pst) = RequestPost (Path $ BSC.pack fp) (Version 1 1)
 	Post {
 		postHost = uncurry Host . second Just <$> hnpn,
 		postUserAgent = Just [Product "Mozilla" (Just "5.0")],
