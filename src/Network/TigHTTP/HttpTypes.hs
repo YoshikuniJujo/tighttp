@@ -17,6 +17,7 @@ module Network.TigHTTP.HttpTypes (
 	requestBody,
 
 	AcceptEncoding(..),
+	HostName,
 ) where
 
 import Control.Applicative
@@ -33,6 +34,8 @@ import System.Locale
 import Network.TigHTTP.Papillon
 
 import Data.HandleLike
+
+type HostName = String
 
 (+++) :: BS.ByteString -> BS.ByteString -> BS.ByteString
 (+++) = BS.append

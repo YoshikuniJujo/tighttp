@@ -29,7 +29,7 @@ httpGet sv req = do
 		(httpContent (contentLength <$> responseContentLength res) sv)
 	return res'
 
-get :: String -> Int -> FilePath -> Request h
+get :: HostName -> Int -> FilePath -> Request h
 get hn pn fp = RequestGet (Uri $ BSC.pack fp) (Version 1 1)
 	Get {
 		getHost = uncurry Host . second Just <$> Just (BSC.pack hn, pn),
@@ -73,7 +73,7 @@ readRest h = do
 			"" <- hlGetLine h
 			readRest h
 
-post :: HandleLike h => String -> Int -> FilePath -> LBS.ByteString -> Request h
+post :: HandleLike h => HostName -> Int -> FilePath -> LBS.ByteString -> Request h
 post hn pn fp pst = RequestPost (Uri $ BSC.pack fp) (Version 1 1)
 	Post {
 		postHost = uncurry Host . second Just <$> hnpn,

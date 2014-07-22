@@ -23,6 +23,8 @@ module Network.TigHTTP.Types (
 
 	Product(..),
 	Qvalue(..),
+
+	HostName,
 	) where
 
 import Network.TigHTTP.HttpTypes
