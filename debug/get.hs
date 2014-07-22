@@ -15,11 +15,11 @@ import Network.TigHTTP.Types
 
 main :: IO ()
 main = do
-	addr : spn : _ <- getArgs
+	addr : spn : pth : _ <- getArgs
 	(pn :: Int) <- readIO spn
 	sv <- flip DebugHandle (Just "low") <$>
 		connectTo addr (PortNumber $ fromIntegral pn)
-	p <- request sv $ get addr pn "/"
+	p <- request sv $ get addr pn pth
 	_ <- runPipe $ responseBody p =$= printP
 	return ()
 

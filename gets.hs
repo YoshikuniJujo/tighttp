@@ -16,7 +16,7 @@ import Network.TigHTTP.Types
 
 main :: IO ()
 main = do
-	addr : spn : _ <- getArgs
+	addr : spn : pth : _ <- getArgs
 	(pn :: Int) <- readIO spn
 	ca <- readCertificateStore [
 		"cacert.sample_pem",
@@ -27,7 +27,7 @@ main = do
 	g <- cprgCreate <$> createEntropyPool :: IO SystemRNG
 	(`P.run` g) $ do
 		t <- P.open sv ["TLS_RSA_WITH_AES_128_CBC_SHA"] [] ca
-		p <- request t $ get addr 443 "/"
+		p <- request t $ get addr pn pth
 		_ <- runPipe $ responseBody p =$= takeP 1 =$= printP
 		return ()
 
