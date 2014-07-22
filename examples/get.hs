@@ -12,9 +12,9 @@ import qualified Data.ByteString as BS
 main :: IO ()
 main = do
 	addr : pth : _ <- getArgs
-	sv <- connectTo addr $ PortNumber 80
-	p <- request sv $ get addr 80 pth
-	_ <- runPipe $ responseBody p =$= finally printP (putStrLn "")
+	h <- connectTo addr $ PortNumber 80
+	r <- request h $ get addr 80 pth
+	_ <- runPipe $ responseBody r =$= finally printP (putStrLn "")
 	return ()
 
 printP :: MonadIO m => Pipe BS.ByteString () m ()
