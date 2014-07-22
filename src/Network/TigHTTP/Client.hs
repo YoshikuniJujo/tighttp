@@ -74,8 +74,8 @@ readRest h = do
 			readRest h
 
 post :: HandleLike h =>
-	HostName -> Int -> FilePath -> Maybe Int -> LBS.ByteString -> Request h
-post hn pn fp len pst = RequestPost (Uri $ BSC.pack fp) (Version 1 1)
+	HostName -> Int -> FilePath -> (Maybe Int, LBS.ByteString) -> Request h
+post hn pn fp (len, pst) = RequestPost (Uri $ BSC.pack fp) (Version 1 1)
 	Post {
 		postHost = uncurry Host . second Just <$> hnpn,
 		postUserAgent = Just [Product "Mozilla" (Just "5.0")],

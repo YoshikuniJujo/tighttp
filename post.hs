@@ -16,8 +16,8 @@ main = do
 	addr : spn : _ <- getArgs
 	(pn :: Int) <- readIO spn
 	sv <- connectTo addr (PortNumber $ fromIntegral pn)
-	p <- request sv $ post addr pn "/" Nothing
-		(LBS.fromChunks ["I am client.\n", "You are server.\n"])
+	p <- request sv $ post addr pn "/"
+		(Nothing, LBS.fromChunks ["I am client.\n", "You are server.\n"])
 	_ <- runPipe $ responseBody p =$= printP
 	return ()
 
