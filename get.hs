@@ -16,7 +16,7 @@ main = do
 	addr : spn : _ <- getArgs
 	(pn :: Int) <- readIO spn
 	sv <- connectTo addr (PortNumber $ fromIntegral pn)
-	p <- request sv $ get addr 80
+	p <- request sv $ get addr 80 "/"
 	_ <- runPipe $ responseBody p =$= printP
 	return ()
 

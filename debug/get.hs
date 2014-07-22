@@ -19,7 +19,7 @@ main = do
 	(pn :: Int) <- readIO spn
 	sv <- flip DebugHandle (Just "low") <$>
 		connectTo addr (PortNumber $ fromIntegral pn)
-	p <- request sv $ get addr pn
+	p <- request sv $ get addr pn "/"
 	_ <- runPipe $ responseBody p =$= printP
 	return ()
 
