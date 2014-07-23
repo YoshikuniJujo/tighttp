@@ -26,7 +26,8 @@ main = do
 	sv <- connectTo addr (PortNumber $ fromIntegral pn)
 	g <- cprgCreate <$> createEntropyPool :: IO SystemRNG
 	(`P.run` g) $ do
-		t <- P.open sv ["TLS_RSA_WITH_AES_128_CBC_SHA"] [] ca
+		t <- P.open' sv addr ["TLS_RSA_WITH_AES_128_CBC_SHA"] [] ca
+		P.getNames t >>= liftIO . print
 		p <- request t $ get addr pn pth
 		_ <- runPipe $ responseBody p =$= takeP 1 =$= printP
 		return ()

@@ -84,6 +84,7 @@ extra-source-files:
     examples/server.hs
     examples/post.hs
     examples/serverp.hs
+    examples/gets.hs
 
 source-repository	head
     type:	git
