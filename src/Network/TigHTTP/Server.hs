@@ -36,7 +36,9 @@ getRequest cl = do
 --		catMaybes =<< showRequest cl req
 	return $ putPostBody cl req r
 
-response :: HandleLike h => LBS.ByteString -> Response h
+response :: (
+	PipeClass p, Monad (p () BS.ByteString (HandleMonad h)),
+	HandleLike h) => LBS.ByteString -> Response p h
 response = mkContents . mkChunked . LBS.toChunks
 
 httpContent :: HandleLike h =>
@@ -60,7 +62,9 @@ mkChunked = flip foldr ("0\r\n\r\n") $ \b ->
 	LBS.append (LBSC.pack (showHex (BS.length b) "") `LBS.append` "\r\n"
 		`LBS.append` LBS.fromStrict b `LBS.append` "\r\n")
 
-mkContents :: HandleLike h => LBS.ByteString -> Response h
+mkContents :: (
+	PipeClass p, Monad (p () BS.ByteString (HandleMonad h)),
+	HandleLike h ) => LBS.ByteString -> Response p h
 mkContents cnt = Response {
 	responseVersion = Version 1 1,
 	responseStatusCode = OK,

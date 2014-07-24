@@ -5,7 +5,7 @@ module Network.TigHTTP.Client (request, get, post) where
 import Control.Applicative
 import Control.Arrow hiding ((+++))
 import Control.Monad
-import "monads-tf" Control.Monad.State (lift)
+import "monads-tf" Control.Monad.State (lift, MonadTrans)
 import Data.Pipe
 import Data.Pipe.List
 import Numeric
@@ -18,7 +18,11 @@ import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Lazy.Char8 as LBSC
 
-request, httpGet :: HandleLike h => h -> Request h -> HandleMonad h (Response h)
+request, httpGet :: (
+	PipeClass p, MonadTrans (p () BS.ByteString),
+	Monad (p () BS.ByteString (HandleMonad h)),
+	HandleLike h ) =>
+	h -> Request h -> HandleMonad h (Response p h)
 request = httpGet
 httpGet sv req = do
 	putRequest sv req
@@ -43,16 +47,23 @@ get hn pn fp = RequestGet (Path $ BSC.pack fp) (Version 1 1)
 		getOthers = []
 	 }
 
-putResponseBody :: HandleLike h =>
-	h -> Response h -> Pipe () BS.ByteString (HandleMonad h) () -> Response h
+putResponseBody :: (PipeClass p, HandleLike h) =>
+	h -> Response p h -> p () BS.ByteString (HandleMonad h) () -> Response p h
 putResponseBody _ res rb = res { responseBody = rb }
 
-httpContent :: HandleLike h =>
-	Maybe Int -> h -> Pipe () BS.ByteString (HandleMonad h) ()
+httpContent :: (
+	PipeClass p, MonadTrans (p () BS.ByteString),
+	Monad (p () BS.ByteString (HandleMonad h)),
+	HandleLike h ) =>
+	Maybe Int -> h -> p () BS.ByteString (HandleMonad h) ()
 httpContent (Just n) h = yield =<< lift (hlGet h n)
 httpContent _ h = getChunked h `onBreak` readRest h
 
-getChunked :: HandleLike h => h -> Pipe () BS.ByteString (HandleMonad h) ()
+getChunked :: (
+	PipeClass p, MonadTrans (p () BS.ByteString),
+	Monad (p () BS.ByteString (HandleMonad h)),
+	HandleLike h ) =>
+	h -> p () BS.ByteString (HandleMonad h) ()
 getChunked h = do
 	(n :: Int) <- lift $ (fst . head . readHex . BSC.unpack) `liftM` hlGetLine h
 	lift . hlDebug h "medium" . BSC.pack . (++ "\n") $ show n

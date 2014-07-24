@@ -404,7 +404,7 @@ parseCacheControl ccma
 		_ -> error "parseCacheControl: bad"
 parseCacheControl cc = CacheControlRaw cc
 
-data Response h = Response {
+data Response p h = Response {
 	responseVersion :: Version,
 	responseStatusCode :: StatusCode,
 	responseConnection :: Maybe BS.ByteString,
@@ -417,10 +417,13 @@ data Response h = Response {
 	responseContentType :: ContentType,
 	responseLastModified :: Maybe UTCTime,
 	responseOthers :: [(BS.ByteString, BS.ByteString)],
-	responseBody :: Pipe () BS.ByteString (HandleMonad h) ()
+	responseBody :: p () BS.ByteString (HandleMonad h) ()
 	}
 
-parseResponse :: HandleLike h => [BS.ByteString] -> Response h
+parseResponse :: (
+	Monad (p () BS.ByteString (HandleMonad h)),
+	HandleLike h) =>
+	[BS.ByteString] -> Response p h
 parseResponse (h : t) = let (v, sc) = parseResponseLine h in
 	parseResponseSep v sc $ map separate t
 	where
@@ -431,8 +434,11 @@ parseResponse (h : t) = let (v, sc) = parseResponseLine h in
 	-- let (k, ':' : ' ' : v) = span (/= ':') i in (k, v)
 parseResponse _ = error "parseResponse: bad response"
 
-parseResponseSep :: HandleLike h => Version -> StatusCode ->
-	[(BS.ByteString, BS.ByteString)] -> Response h
+parseResponseSep :: (
+	Monad (p () BS.ByteString (HandleMonad h)),
+	HandleLike h) =>
+	Version -> StatusCode ->
+	[(BS.ByteString, BS.ByteString)] -> Response p h
 parseResponseSep v sc kvs = Response {
 	responseVersion = v,
 	responseStatusCode = sc,
@@ -478,7 +484,11 @@ parseStatusCode sc
 	| ("400", _) <- BSC.span (not . isSpace) sc = BadRequest
 parseStatusCode sc = error $ "parseStatusCode: bad status code: " ++ BSC.unpack sc
 
-putResponse :: HandleLike h => h -> Response h -> HandleMonad h ()
+putResponse :: (
+	PipeClass p, MonadTrans (p BS.ByteString ()),
+	Monad (p BS.ByteString () (HandleMonad h)),
+	HandleLike h) =>
+	h -> Response p h -> HandleMonad h ()
 putResponse cl r = do
 	let	hd = [
 			Just $ showVersion (responseVersion r) +++ " " +++
@@ -503,7 +513,11 @@ putResponse cl r = do
 	_ <- runPipe $ p =$= putAll cl
 	return ()
 
-putAll :: HandleLike h => h -> Pipe BS.ByteString () (HandleMonad h) ()
+putAll :: (
+	PipeClass p, MonadTrans (p BS.ByteString ()),
+	Monad (p BSC.ByteString () (HandleMonad h)),
+	HandleLike h) =>
+	h -> p BS.ByteString () (HandleMonad h) ()
 putAll cl = do
 	ms <- await
 	case ms of
