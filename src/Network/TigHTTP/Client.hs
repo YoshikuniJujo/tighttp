@@ -68,7 +68,9 @@ getChunked h = do
 	(n :: Int) <- lift $ (fst . head . readHex . BSC.unpack) `liftM` hlGetLine h
 	lift . hlDebug h "medium" . BSC.pack . (++ "\n") $ show n
 	case n of
-		0 -> return ()
+		0 -> do	l <- lift $ hlGetLine h
+			lift . hlDebug h "medium" . BSC.pack . (++ "\n") $ show l
+			return ()
 		_ -> do	r <- lift $ hlGet h n
 			"" <- lift $ hlGetLine h
 			yield r
@@ -117,4 +119,5 @@ mkChunked = flip foldr ("0\r\n\r\n") $ \b ->
 hGetHeader :: HandleLike h => h -> HandleMonad h [BS.ByteString]
 hGetHeader h = do
 	l <- hlGetLine h
+	hlDebug h "medium" $ l `BS.append` "\n"
 	if BS.null l then return [] else (l :) `liftM` hGetHeader h

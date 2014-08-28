@@ -178,7 +178,7 @@ parseReq (h : t) = let
 		case BS.splitAt 2 csv of
 			(": ", v) -> (k, v)
 			_ -> error "parse: bad"
-parseReq [] = error "parse: bad request"
+parseReq [] = error "parse: null request"
 
 parseSep :: HandleLike h => RequestType ->
 	Path -> Version -> [(BS.ByteString, BS.ByteString)] -> Request h
@@ -430,9 +430,9 @@ parseResponse (h : t) = let (v, sc) = parseResponseLine h in
 	separate i = let (k, csv) = BSC.span (/= ':') i in
 		case BS.splitAt 2 csv of
 			(": ", v) -> (k, v)
-			_ -> error "parseResponse: bad response"
+			_ -> error $ "parseResponse: bad response: " ++ show csv
 	-- let (k, ':' : ' ' : v) = span (/= ':') i in (k, v)
-parseResponse _ = error "parseResponse: bad response"
+parseResponse _ = error "parseResponse: null response"
 
 parseResponseSep :: (
 	Monad (p () BS.ByteString (HandleMonad h)),

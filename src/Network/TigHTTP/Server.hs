@@ -26,7 +26,7 @@ import Numeric
 
 getRequest :: HandleLike h => h -> HandleMonad h (Request h)
 getRequest cl = do
-	h <- hlGetHeader cl
+	h <- hlGetHeader' cl
 	let req = parseReq h
 	r <- case req of
 		RequestPost {} -> return . httpContent cl $
@@ -82,7 +82,13 @@ mkContents cnt = Response {
 	responseBody = fromList $ LBS.toChunks cnt
  }
 
+hlGetHeader' :: HandleLike h => h -> HandleMonad h [BS.ByteString]
+hlGetHeader' h = do
+	l <- hlGetLine h
+	if BS.null l then hlGetHeader' h else (l :) `liftM` hlGetHeader h
+
 hlGetHeader :: HandleLike h => h -> HandleMonad h [BS.ByteString]
 hlGetHeader h = do
 	l <- hlGetLine h
+	hlDebug h "medium" l
 	if BS.null l then return [] else (l :) `liftM` hlGetHeader h
