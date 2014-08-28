@@ -12,7 +12,6 @@ import Text.Papillon
 import Data.ByteString (ByteString)
 import Data.ByteString.Char8 (pack)
 import qualified Data.ByteString as BS
-import qualified Data.ByteString.Char8 as BSC
 
 import Network.TigHTTP.Token
 
@@ -109,8 +108,8 @@ crlf :: () = '\r' '\n'
 
 lws :: () = _:crlf _:(' ' / '\t')+
 
-text :: ByteString
-	= ts:(cs:<isTextChar>+ { cs } / _:lws { " " })+		{ pack $ concat ts }
+-- text :: ByteString
+--	= ts:(cs:<isTextChar>+ { cs } / _:lws { " " })+		{ pack $ concat ts }
 
 qdtext :: ByteString
 	= ts:(cs:<isQdtextChar>+ { cs } / _:lws { " " })+	{ pack $ concat ts }
@@ -125,10 +124,3 @@ value :: ByteString
 	/ qs:quotedString					{ qs }
 
 |]
-
-instance Source ByteString where
-	type Token ByteString = Char
-	data Pos ByteString = NoPos
-	getToken = BSC.uncons
-	initialPos = NoPos
-	updatePos _ _ = NoPos
