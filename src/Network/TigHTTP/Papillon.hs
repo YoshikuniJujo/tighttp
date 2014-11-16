@@ -44,17 +44,20 @@ showType (TypeRaw t) = t
 data Subtype
 	= Plain
 	| Html
+	| Css
 	| SubtypeRaw BS.ByteString
 	deriving Show
 
 mkSubtype :: BS.ByteString -> Subtype
 mkSubtype "html" = Html
 mkSubtype "plain" = Plain
+mkSubtype "css" = Css
 mkSubtype s = SubtypeRaw s
 
 showSubtype :: Subtype -> BS.ByteString
 showSubtype Plain = "plain"
 showSubtype Html = "html"
+showSubtype Css = "css"
 showSubtype (SubtypeRaw s) = s
 
 data Parameter

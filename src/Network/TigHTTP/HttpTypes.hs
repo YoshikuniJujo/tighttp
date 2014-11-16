@@ -112,6 +112,7 @@ putRequest sv (RequestPost uri vsn p) = do
 		("Content-Length: " +++) .  showContentLength <$> postContentLength p
 		] ++ map (\(k, v) -> Just $ k +++ ": " +++ v) (postOthers p) ++ [
  			Just "" ]
+	hlDebug sv "medium" . crlf $ catMaybes hd
 	hlPut sv . crlf $ catMaybes hd
 	_ <- runPipe $ postBody p =$= putAll sv
 	return ()
@@ -188,7 +189,10 @@ parseSep rt uri v kvs = RequestRaw rt uri v kvs
 
 parseRequestLine :: BS.ByteString -> (RequestType, Path, Version)
 parseRequestLine rl = let
-	[rts, uris, vs] = BSC.words rl
+	(rts, uris, vs) = case BSC.words rl of
+		[r, u, v] -> (r, u, v)
+		_ -> error $ "Network.TigHTTP.HttpTypes.parseRequestLine: " ++
+			show rl
 	rt = case rts of
 		"GET" -> RequestTypeGet
 		"POST" -> RequestTypePost

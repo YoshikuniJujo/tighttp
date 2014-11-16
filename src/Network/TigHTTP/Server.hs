@@ -26,7 +26,10 @@ import Numeric
 
 getRequest :: HandleLike h => h -> HandleMonad h (Request h)
 getRequest cl = do
+	hlDebug cl "medium" "begin getRequest\n"
 	h <- hlGetHeader' cl
+	hlDebug cl "medium" $ "hlGetHeader' cl: " `BS.append`
+		BSC.pack (show h ++ "\n")
 	let req = parseReq h
 	r <- case req of
 		RequestPost {} -> return . httpContent cl $
@@ -48,14 +51,19 @@ httpContent h _ = getChunked h
 
 getChunked :: HandleLike h => h -> Pipe () BS.ByteString (HandleMonad h) ()
 getChunked h = do
-	(n :: Int) <- lift $ (fst . head . readHex . BSC.unpack) `liftM` hlGetLine h
+	(n :: Int) <- lift $ (fst . head . readHex . BSC.unpack) `liftM` hlGetLineNotNull h
 	lift . hlDebug h "low" . BSC.pack . (++ "\n") $ show n
 	case n of
 		0 -> return ()
 		_ -> do	r <- lift $ hlGet h n
-			"" <- lift $ hlGetLine h
+--			"" <- lift $ hlGetLine h
 			yield r
 			getChunked h
+
+hlGetLineNotNull :: HandleLike h => h -> HandleMonad h BS.ByteString
+hlGetLineNotNull h = do
+	ln <- hlGetLine h
+	if BS.null ln then hlGetLineNotNull h else return ln
 
 mkChunked :: [BS.ByteString] -> LBS.ByteString
 mkChunked = flip foldr ("0\r\n\r\n") $ \b ->
@@ -85,6 +93,7 @@ mkContents cnt = Response {
 hlGetHeader' :: HandleLike h => h -> HandleMonad h [BS.ByteString]
 hlGetHeader' h = do
 	l <- hlGetLine h
+	hlDebug h "medium" . BSC.pack $ show l
 	if BS.null l then hlGetHeader' h else (l :) `liftM` hlGetHeader h
 
 hlGetHeader :: HandleLike h => h -> HandleMonad h [BS.ByteString]

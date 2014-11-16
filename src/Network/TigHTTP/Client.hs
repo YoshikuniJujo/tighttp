@@ -25,11 +25,12 @@ request, httpGet :: (
 	h -> Request h -> HandleMonad h (Response p h)
 request = httpGet
 httpGet sv req = do
+	hlDebug sv "medium" "begin httpGet\n"
 	putRequest sv req
+	hlDebug sv "medium" "httpGet: after putRequest\n"
 	src <- hGetHeader sv
 	let res = parseResponse src
---	mapM_ (hlDebug sv "critical" . (`BS.append` "\n") . BS.take 100)
---		. catMaybes =<< showResponse sv res
+	hlDebug sv "medium" "httpGet: after hGetHeader\n"
 	let res' = putResponseBody sv res
 		(httpContent (contentLength <$> responseContentLength res) sv)
 	return res'
@@ -119,5 +120,5 @@ mkChunked = flip foldr ("0\r\n\r\n") $ \b ->
 hGetHeader :: HandleLike h => h -> HandleMonad h [BS.ByteString]
 hGetHeader h = do
 	l <- hlGetLine h
-	hlDebug h "medium" $ l `BS.append` "\n"
+	hlDebug h "medium" $ l
 	if BS.null l then return [] else (l :) `liftM` hGetHeader h
