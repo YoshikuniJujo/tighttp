@@ -15,7 +15,8 @@ import qualified Data.ByteString as BS
 
 import Network.TigHTTP.Token
 
-data ContentType = ContentType Type Subtype [Parameter] deriving Show
+data ContentType = ContentType Type Subtype [Parameter]
+	deriving (Show, Eq)
 
 parseContentType :: BS.ByteString -> ContentType
 parseContentType ct = case runError . contentType $ parse ct of
@@ -31,7 +32,7 @@ showContentType (ContentType t st ps) = showType t
 data Type
 	= Text
 	| TypeRaw BS.ByteString
-	deriving Show
+	deriving (Show, Eq)
 
 mkType :: BS.ByteString -> Type
 mkType "text" = Text
@@ -46,7 +47,7 @@ data Subtype
 	| Html
 	| Css
 	| SubtypeRaw BS.ByteString
-	deriving Show
+	deriving (Show, Eq)
 
 mkSubtype :: BS.ByteString -> Subtype
 mkSubtype "html" = Html
@@ -63,7 +64,7 @@ showSubtype (SubtypeRaw s) = s
 data Parameter
 	= Charset Charset
 	| ParameterRaw BS.ByteString BS.ByteString
-	deriving Show
+	deriving (Show, Eq)
 
 mkParameter :: BS.ByteString -> BS.ByteString -> Parameter
 mkParameter "charset" "UTF-8" = Charset Utf8
@@ -80,7 +81,7 @@ showParameters (ParameterRaw a v : ps) = "; " `BS.append` a
 data Charset
 	= Utf8
 	| CharsetRaw BS.ByteString
-	deriving Show
+	deriving (Show, Eq)
 
 showCharset :: Charset -> BS.ByteString
 showCharset Utf8 = "UTF-8"
