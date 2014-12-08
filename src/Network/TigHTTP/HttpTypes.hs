@@ -290,7 +290,7 @@ showHost (Host h p) = h +++ maybe "" ((':' -:-) . BSC.pack . show) p
 data Product
 	= Product BS.ByteString (Maybe BS.ByteString)
 	| ProductComment BS.ByteString
-	deriving Show
+	deriving (Show, Eq)
 
 showProduct :: Product -> BS.ByteString
 showProduct (Product pn mpv) = pn +++ case mpv of
