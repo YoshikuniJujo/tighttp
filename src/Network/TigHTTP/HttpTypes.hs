@@ -482,10 +482,37 @@ parseResponseLine src = case BSC.span (/= ' ') src of
 
 parseStatusCode :: BS.ByteString -> StatusCode
 parseStatusCode sc
+	| ("100", _) <- BSC.span (not . isSpace) sc = Continue
+	| ("101", _) <- BSC.span (not . isSpace) sc = SwitchingProtocols
 	| ("200", _) <- BSC.span (not . isSpace) sc = OK
+	| ("201", _) <- BSC.span (not . isSpace) sc = Created
+	| ("202", _) <- BSC.span (not . isSpace) sc = Accepted
+	| ("203", _) <- BSC.span (not . isSpace) sc = NonAuthoritativeInformation
+	| ("204", _) <- BSC.span (not . isSpace) sc = NoContent
+	| ("205", _) <- BSC.span (not . isSpace) sc = ResetContent
+	| ("206", _) <- BSC.span (not . isSpace) sc = PartialContent
 	| ("301", _) <- BSC.span (not . isSpace) sc = MovedPermanently
 	| ("302", _) <- BSC.span (not . isSpace) sc = Found
+	| ("303", _) <- BSC.span (not . isSpace) sc = SeeOther
+	| ("304", _) <- BSC.span (not . isSpace) sc = NotModified
+	| ("305", _) <- BSC.span (not . isSpace) sc = UseProxy
+	| ("307", _) <- BSC.span (not . isSpace) sc = TemporaryRedirect
 	| ("400", _) <- BSC.span (not . isSpace) sc = BadRequest
+	| ("401", _) <- BSC.span (not . isSpace) sc = Unauthorized
+	| ("402", _) <- BSC.span (not . isSpace) sc = PaymentRequired
+	| ("403", _) <- BSC.span (not . isSpace) sc = Forbidden
+	| ("404", _) <- BSC.span (not . isSpace) sc = NotFound
+	| ("405", _) <- BSC.span (not . isSpace) sc = MethodNotAllowed
+	| ("406", _) <- BSC.span (not . isSpace) sc = NotAcceptable
+	| ("407", _) <- BSC.span (not . isSpace) sc = ProxyAuthenticationRequired
+	| ("408", _) <- BSC.span (not . isSpace) sc = RequestTimeout
+	| ("409", _) <- BSC.span (not . isSpace) sc = Conflict
+	| ("500", _) <- BSC.span (not . isSpace) sc = InternalServerError
+	| ("501", _) <- BSC.span (not . isSpace) sc = NotImplemented
+	| ("502", _) <- BSC.span (not . isSpace) sc = BadGateway
+	| ("503", _) <- BSC.span (not . isSpace) sc = ServiceUnavailable
+	| ("504", _) <- BSC.span (not . isSpace) sc = GatewayTimeout
+	| ("505", _) <- BSC.span (not . isSpace) sc = HttpVersionNotSupported
 parseStatusCode sc = error $ "parseStatusCode: bad status code: " ++ BSC.unpack sc
 
 putResponse :: (
@@ -538,18 +565,70 @@ data StatusCode
 	= Continue
 	| SwitchingProtocols
 	| OK
+	| Created
+	| Accepted
+	| NonAuthoritativeInformation
+	| NoContent
+	| ResetContent
+	| PartialContent
+	| MultipleChoices
 	| MovedPermanently
 	| Found
+	| SeeOther
+	| NotModified
+	| UseProxy
+	| TemporaryRedirect
 	| BadRequest
+	| Unauthorized
+	| PaymentRequired
+	| Forbidden
+	| NotFound
+	| MethodNotAllowed
+	| NotAcceptable
+	| ProxyAuthenticationRequired
+	| RequestTimeout
+	| Conflict
+	| InternalServerError
+	| NotImplemented
+	| BadGateway
+	| ServiceUnavailable
+	| GatewayTimeout
+	| HttpVersionNotSupported
 	deriving Show
 
 showStatusCode :: StatusCode -> BS.ByteString
 showStatusCode Continue = "100 Continue"
 showStatusCode SwitchingProtocols = "101 SwitchingProtocols"
 showStatusCode OK = "200 OK"
+showStatusCode Created = "201 Created"
+showStatusCode Accepted = "202 Accepted"
+showStatusCode NonAuthoritativeInformation = "203 Non-Authoritative Information"
+showStatusCode NoContent = "204 No Content"
+showStatusCode ResetContent = "205 Reset Content"
+showStatusCode PartialContent = "206 Partial Content"
+showStatusCode MultipleChoices = "300 Multiple Choices"
 showStatusCode MovedPermanently = "301 Moved Permanently"
 showStatusCode Found = "302 Found"
+showStatusCode SeeOther = "303 See Other"
+showStatusCode NotModified = "304 Not Modified"
+showStatusCode UseProxy = "305 Use Proxy"
+showStatusCode TemporaryRedirect = "307 Temporary Redirect"
 showStatusCode BadRequest = "400 Bad Request"
+showStatusCode Unauthorized = "401 Unauthorized"
+showStatusCode PaymentRequired = "402 Payment Required"
+showStatusCode Forbidden = "403 Forbidden"
+showStatusCode NotFound = "404 Not Found"
+showStatusCode MethodNotAllowed = "405 Method Not Allowd"
+showStatusCode NotAcceptable = "406 Not Acceptable"
+showStatusCode ProxyAuthenticationRequired = "407 Proxy Authentication Required"
+showStatusCode RequestTimeout = "408 Request Timeout"
+showStatusCode Conflict = "409 Conflict"
+showStatusCode InternalServerError = "500 Internal Server Error"
+showStatusCode NotImplemented = "501 Not Implemented"
+showStatusCode BadGateway = "502 Bad Gateway"
+showStatusCode ServiceUnavailable = "503 Service Unavailable"
+showStatusCode GatewayTimeout = "504 Gateway Timeout"
+showStatusCode HttpVersionNotSupported = "505 HTTP version Not Supported"
 
 data ContentLength = ContentLength Int deriving Show
 
