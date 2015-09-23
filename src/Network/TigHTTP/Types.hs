@@ -14,6 +14,8 @@ module Network.TigHTTP.Types (
 	Accept(..), AcceptEncoding(..), AcceptLanguage(..), Host(..),
 
 	-- ** Response Header
+	SetCookie(..), setCookie,
+
 	-- ** Entity Header
 	ContentLength(..), ContentType(..), Type(..), Subtype(..),
 

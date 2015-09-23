@@ -19,11 +19,15 @@ module Network.TigHTTP.HttpTypes (
 
 	AcceptEncoding(..),
 	HostName,
+
+	SetCookie(..), setCookie,
 ) where
 
 import Control.Applicative
 import "monads-tf" Control.Monad.Trans
 import Data.Maybe
+import Data.List
+import Text.Read (readMaybe)
 import Data.Char
 -- import Data.List
 import qualified Data.ByteString as BS
@@ -34,6 +38,7 @@ import Data.Pipe.List
 import System.Locale
 
 import Network.TigHTTP.Papillon
+import Network.TigHTTP.CookieTime
 
 import Data.HandleLike
 
@@ -441,8 +446,34 @@ data Response p h = Response {
 	responseContentLength :: Maybe ContentLength,
 	responseContentType :: ContentType,
 	responseLastModified :: Maybe UTCTime,
+	responseSetCookie :: [SetCookie],
 	responseOthers :: [(BS.ByteString, BS.ByteString)],
 	responseBody :: p () BS.ByteString (HandleMonad h) ()
+	}
+
+data SetCookie = SetCookie {
+	cookieName :: BS.ByteString,
+	cookieValue :: BS.ByteString,
+	cookieExpires :: Maybe UTCTime,
+	cookieMaxAge :: Maybe DiffTime,
+	cookieDomain :: Maybe BS.ByteString,
+	cookiePath :: Maybe BS.ByteString,
+	cookieSecure :: Bool,
+	cookieHttpOnly :: Bool,
+	cookieExtension :: [BS.ByteString]
+	} deriving Show
+
+setCookie :: BS.ByteString -> BS.ByteString -> SetCookie
+setCookie n v = SetCookie {
+	cookieName = n,
+	cookieValue = v,
+	cookieExpires = Nothing,
+	cookieMaxAge = Nothing,
+	cookieDomain = Nothing,
+	cookiePath = Nothing,
+	cookieSecure = True,
+	cookieHttpOnly = True,
+	cookieExtension = []
 	}
 
 parseResponse :: (
@@ -483,14 +514,84 @@ parseResponseSep v sc kvs = Response {
 	responseETag = lookup "ETag" kvs,
 	responseAcceptRanges = lookup "Accept-Ranges" kvs,
 	responseConnection = lookup "Connection" kvs,
+	responseSetCookie = map parseSetCookie . map snd $ filter ((== "Set-Cookie") . fst) kvs ,
 	responseOthers = filter ((`notElem` responseKeys) . fst) kvs,
 	responseBody = return ()
- }
+	}
+
+{-
+data SetCookie = SetCookie {
+	cookieName :: BS.ByteString,
+	cookieValue :: BS.ByteString,
+	cookieExpire :: Maybe UTCTime,
+	cookieMaxAge :: Maybe DiffTime,
+	cookieDomain :: Maybe BS.ByteString,
+	cookiePath :: Maybe BS.ByteString,
+	cookieSecure :: Bool,
+	cookieHttpOnly :: Bool,
+	cookieExtension :: [BS.ByteString]
+	}
+	deriving Show
+	-}
+
+setCookieKeys :: [BS.ByteString]
+setCookieKeys = [
+	
+	]
+
+parseSetCookie :: BS.ByteString -> SetCookie
+parseSetCookie bs = SetCookie {
+	cookieName = nm,
+	cookieValue = vl,
+	cookieExpires = (\(CookieExpires e) -> e) <$> find isCookieExpires cas,
+	cookieMaxAge = (\(CookieMaxAge ma) -> ma) <$> find isCookieMaxAge cas,
+	cookieDomain = (\(CookieDomain d) -> d) <$> find isCookieDomain cas,
+	cookiePath = (\(CookiePath p) -> p) <$> find isCookiePath cas,
+	cookieSecure = CookieSecure `elem` cas,
+	cookieHttpOnly = CookieHttpOnly `elem` cas,
+	cookieExtension = (\(CookieExtension e) -> e) <$> filter isCookieExtension cas
+	}
+	where
+	(nmvl) : kvs = map (BSC.dropWhile isSpace) $ BSC.split ';' bs
+	[nm, vl] = BSC.split '=' nmvl
+	cas = map cookieAttr kvs
+
+cookieAttr :: BS.ByteString -> CookieAttr
+cookieAttr ca
+	| ["Expires", v] <- av, Just d <- parseCookieExpiresTime v =
+		CookieExpires d
+	| ["Max-Age", v] <- av, Just ma <- fromInteger <$> readMaybe (BSC.unpack v) =
+		CookieMaxAge ma
+	| ["Domain", v] <- av = CookieDomain v
+	| ["Path", v] <- av = CookiePath v
+	where
+	av = BSC.split '=' ca
+cookieAttr "Secure" = CookieSecure
+cookieAttr "HttpOnly" = CookieHttpOnly
+cookieAttr ca = CookieExtension ca
+
+data CookieAttr
+	= CookieExpires UTCTime
+	| CookieMaxAge DiffTime
+	| CookieDomain BS.ByteString
+	| CookiePath BS.ByteString
+	| CookieSecure
+	| CookieHttpOnly
+	| CookieExtension BS.ByteString
+	deriving (Show, Eq)
+
+isCookieExpires, isCookieMaxAge, isCookieDomain,
+	isCookiePath, isCookieExtension :: CookieAttr -> Bool
+isCookieExpires (CookieExpires _) = True; isCookieExpires _ = False
+isCookieMaxAge (CookieMaxAge _) = True; isCookieMaxAge _ = False
+isCookieDomain (CookieDomain _) = True; isCookieDomain _ = False
+isCookiePath (CookiePath _) = True; isCookiePath _ = False
+isCookieExtension (CookieExtension _) = True; isCookieExtension _ = False
 
 responseKeys :: [BS.ByteString]
 responseKeys = [
 	"Date", "Content-Length", "Content-Type", "Server", "Last-Modified",
-	"ETag", "Accept-Ranges", "Connection", "Transfer-Encoding" ]
+	"ETag", "Accept-Ranges", "Connection", "Transfer-Encoding", "Set-Cookie" ]
 
 initN :: Int -> BS.ByteString -> BS.ByteString
 initN n lst = BS.take (BS.length lst - n) lst
@@ -558,12 +659,39 @@ putResponse cl r = do
 			("Accept-Ranges: " +++) <$> responseAcceptRanges r,
 			("Connection: " +++) <$> responseConnection r
 			] ++
+			map (Just . ("Set-Cookie: " +++) . showSetCookie)
+				(responseSetCookie r) ++
 			map (\(k, v) -> Just $ k +++ ": " +++ v) (responseOthers r) ++
 			[ Just "" ]
 		p = responseBody r
 	hlPut cl . crlf $ catMaybes hd
 	_ <- runPipe $ p =$= putAll cl
 	return ()
+
+{-
+data SetCookie = SetCookie {
+	cookieName :: BS.ByteString,
+	cookieValue :: BS.ByteString,
+	cookieExpires :: Maybe UTCTime,
+	cookieMaxAge :: Maybe DiffTime,
+	cookieDomain :: Maybe BS.ByteString,
+	cookiePath :: Maybe BS.ByteString,
+	cookieSecure :: Bool,
+	cookieHttpOnly :: Bool,
+	cookieExtension :: [BS.ByteString]
+	} deriving Show
+-}
+
+showSetCookie :: SetCookie -> BS.ByteString
+showSetCookie sc = BS.intercalate "; " $ catMaybes [
+	Just $ cookieName sc +++ "=" +++ cookieValue sc,
+	("Expires=" +++) . cookieExpiresTime <$> cookieExpires sc,
+	("Max-Age=" +++) . BSC.pack . init . show <$> cookieMaxAge sc,
+	("Domain=" +++) <$> cookieDomain sc,
+	("Path=" +++) <$> cookiePath sc,
+	if cookieSecure sc then Just "Secure" else Nothing,
+	if cookieHttpOnly sc then Just "HttpOnly" else Nothing
+	]
 
 putAll :: (
 	PipeClass p, MonadTrans (p BS.ByteString ()),

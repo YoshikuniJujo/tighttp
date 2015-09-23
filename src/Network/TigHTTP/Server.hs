@@ -86,6 +86,7 @@ mkContents cnt = Response {
 	responseETag = Nothing,
 	responseAcceptRanges = Nothing,
 	responseConnection = Nothing,
+	responseSetCookie = [],
 	responseOthers = [],
 	responseBody = fromList $ LBS.toChunks cnt
  }

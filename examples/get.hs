@@ -14,6 +14,8 @@ main = do
 	addr : pth : _ <- getArgs
 	h <- connectTo addr $ PortNumber 80
 	r <- request h $ get addr 80 pth
+	print $ responseOthers r
+	print $ responseSetCookie r
 	_ <- runPipe $ responseBody r =$= finally printP (putStrLn "")
 	return ()
 
