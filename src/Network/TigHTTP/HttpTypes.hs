@@ -25,6 +25,7 @@ import Control.Applicative
 import "monads-tf" Control.Monad.Trans
 import Data.Maybe
 import Data.Char
+-- import Data.List
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import Data.Time
@@ -90,6 +91,11 @@ putRequest sv (RequestGet uri vsn g) = do
 			map showConnection <$> getConnection g,
 		("Cache-Control: " +++) . BSC.intercalate "," .
 			map showCacheControl <$> getCacheControl g,
+		("Cookie : " +++) . BSC.intercalate "; " .
+			map (\(k, v) -> k +++ "=" +++ v) <$>
+				if null $ getCookie g
+					then Nothing
+					else Just $ getCookie g,
 		Just ""
 		]
 	hlDebug sv "medium" . crlf $ catMaybes r
@@ -109,7 +115,12 @@ putRequest sv (RequestPost uri vsn p) = do
 		("Cache-Control: " +++) . BSC.intercalate "," .
 			map showCacheControl <$> postCacheControl p,
 		("Content-Type: " +++) .  showContentType <$> postContentType p,
-		("Content-Length: " +++) .  showContentLength <$> postContentLength p
+		("Content-Length: " +++) .  showContentLength <$> postContentLength p,
+		("Cookie : " +++) . BSC.intercalate "; " .
+			map (\(k, v) -> k +++ "=" +++ v) <$>
+				if null $ postCookie p
+					then Nothing
+					else Just $ postCookie p
 		] ++ map (\(k, v) -> Just $ k +++ ": " +++ v) (postOthers p) ++ [
  			Just "" ]
 	hlDebug sv "medium" . crlf $ catMaybes hd
@@ -131,6 +142,7 @@ data Get = Get {
 	getAcceptLanguage :: Maybe [AcceptLanguage],
 	getHost :: Maybe Host,
 	getUserAgent :: Maybe [Product],
+	getCookie :: [(BS.ByteString, BS.ByteString)],
 	getOthers :: [(BS.ByteString, BS.ByteString)]
  } deriving Show
 
@@ -145,6 +157,7 @@ data Post h = Post {
 	postUserAgent :: Maybe [Product],
 	postContentLength :: Maybe ContentLength,
 	postContentType :: Maybe ContentType,
+	postCookie :: [(BS.ByteString, BS.ByteString)],
 	postOthers :: [(BS.ByteString, BS.ByteString)],
 	postBody :: Pipe () BS.ByteString (HandleMonad h) () }
 
@@ -220,6 +233,7 @@ parseGet kvs = Get {
 	getConnection = map parseConnection . unlist <$> lookup "Connection" kvs,
 	getCacheControl =
 		map parseCacheControl . unlist <$> lookup "Cache-Control" kvs,
+	getCookie = maybe [] parseCookie $ lookup "Cookie" kvs,
 	getOthers = filter ((`notElem` getKeys) . fst) kvs
  }
 
@@ -242,6 +256,7 @@ parsePost kvs = Post {
 		Just "chunked" -> Just Chunked
 		Nothing -> Nothing
 		_ -> error "bad Transfer-Encoding",
+	postCookie = maybe [] parseCookie $ lookup "Cookie" kvs,
 	postOthers = filter ((`notElem` postKeys) . fst) kvs,
 	postBody = return ()
  }
@@ -272,7 +287,7 @@ sepTkn src = tk : sepTkn (BSC.dropWhile isSpace src')
 getKeys :: [BS.ByteString]
 getKeys = [
 	"Host", "User-Agent", "Accept", "Accept-Language", "Accept-Encoding",
-	"Connection", "Cache-Control"
+	"Connection", "Cache-Control", "Cookie"
  ]
 
 data Host = Host BS.ByteString (Maybe Int) deriving Show
@@ -407,6 +422,12 @@ parseCacheControl ccma
 		Just ('=', ma) -> MaxAge . read $ BSC.unpack ma
 		_ -> error "parseCacheControl: bad"
 parseCacheControl cc = CacheControlRaw cc
+
+parseCookie :: BS.ByteString -> [(BS.ByteString, BS.ByteString)]
+parseCookie bs =
+	map ((\[k, v] -> (BSC.dropWhile isSpace k, BSC.dropWhile isSpace v))
+			. BSC.split '=')
+		$ BSC.split ';' bs
 
 data Response p h = Response {
 	responseVersion :: Version,

@@ -45,6 +45,7 @@ get hn pn fp = RequestGet (Path $ BSC.pack fp) (Version 1 1)
 		getAcceptEncoding = Just [],
 		getConnection = Just [Connection "keep-alive"],
 		getCacheControl = Just [MaxAge 0],
+		getCookie = [],
 		getOthers = []
 	 }
 
@@ -102,6 +103,7 @@ post hn pn fp (len, pst) = RequestPost (Path $ BSC.pack fp) (Version 1 1)
 		postContentType = Just $ ContentType Text Plain [],
 		postContentLength = cl,
 		postTransferEncoding = ch,
+		postCookie = [],
 		postOthers = [],
 		postBody = fromList cnt
 	 }
