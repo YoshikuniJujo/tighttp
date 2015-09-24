@@ -519,26 +519,6 @@ parseResponseSep v sc kvs = Response {
 	responseBody = return ()
 	}
 
-{-
-data SetCookie = SetCookie {
-	cookieName :: BS.ByteString,
-	cookieValue :: BS.ByteString,
-	cookieExpire :: Maybe UTCTime,
-	cookieMaxAge :: Maybe DiffTime,
-	cookieDomain :: Maybe BS.ByteString,
-	cookiePath :: Maybe BS.ByteString,
-	cookieSecure :: Bool,
-	cookieHttpOnly :: Bool,
-	cookieExtension :: [BS.ByteString]
-	}
-	deriving Show
-	-}
-
-setCookieKeys :: [BS.ByteString]
-setCookieKeys = [
-	
-	]
-
 parseSetCookie :: BS.ByteString -> SetCookie
 parseSetCookie bs = SetCookie {
 	cookieName = nm,
@@ -667,20 +647,6 @@ putResponse cl r = do
 	hlPut cl . crlf $ catMaybes hd
 	_ <- runPipe $ p =$= putAll cl
 	return ()
-
-{-
-data SetCookie = SetCookie {
-	cookieName :: BS.ByteString,
-	cookieValue :: BS.ByteString,
-	cookieExpires :: Maybe UTCTime,
-	cookieMaxAge :: Maybe DiffTime,
-	cookieDomain :: Maybe BS.ByteString,
-	cookiePath :: Maybe BS.ByteString,
-	cookieSecure :: Bool,
-	cookieHttpOnly :: Bool,
-	cookieExtension :: [BS.ByteString]
-	} deriving Show
--}
 
 showSetCookie :: SetCookie -> BS.ByteString
 showSetCookie sc = BS.intercalate "; " $ catMaybes [
