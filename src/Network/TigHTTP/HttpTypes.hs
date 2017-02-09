@@ -23,19 +23,16 @@ module Network.TigHTTP.HttpTypes (
 	SetCookie(..), setCookie,
 ) where
 
-import Control.Applicative
 import "monads-tf" Control.Monad.Trans
 import Data.Maybe
 import Data.List
 import Text.Read (readMaybe)
 import Data.Char
--- import Data.List
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import Data.Time
 import Data.Pipe
 import Data.Pipe.List
-import System.Locale
 
 import Network.TigHTTP.Papillon
 import Network.TigHTTP.CookieTime

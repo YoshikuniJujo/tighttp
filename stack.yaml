@@ -1,0 +1,10 @@
+resolver: lts-3.22
+
+packages:
+        - '.'
+
+extra-deps:
+        - handle-like-0.1.0.3
+        - papillon-0.1.0.3
+        - simple-pipe-0.0.0.29
+        - time-1.5.0.1

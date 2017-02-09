@@ -2,8 +2,6 @@
 
 module Network.TigHTTP.Server (
 	getRequest, putResponse, response,
---	ContentType(..), Type(..), Subtype(..), Parameter(..), Charset(..),
---	Request(..), Get(..), Post(..),
 	requestBody,
 	requestPath,
 	) where
@@ -17,7 +15,6 @@ import qualified Data.ByteString.Lazy.Char8 as LBSC
 import Data.Time
 import Data.Pipe
 import Data.Pipe.List
-import System.Locale
 
 import Network.TigHTTP.HttpTypes
 import Data.HandleLike
@@ -35,8 +32,6 @@ getRequest cl = do
 		RequestPost {} -> return . httpContent cl $
 			requestBodyLength req
 		_ -> return (return ())
---	mapM_ (hlDebug cl "critical" . (`BS.append` "\n")) .
---		catMaybes =<< showRequest cl req
 	return $ putPostBody cl req r
 
 response :: (
@@ -56,7 +51,6 @@ getChunked h = do
 	case n of
 		0 -> return ()
 		_ -> do	r <- lift $ hlGet h n
---			"" <- lift $ hlGetLine h
 			yield r
 			getChunked h
 

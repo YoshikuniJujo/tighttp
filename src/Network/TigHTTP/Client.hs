@@ -2,7 +2,6 @@
 
 module Network.TigHTTP.Client (request, get, post) where
 
-import Control.Applicative
 import Control.Arrow hiding ((+++))
 import Control.Monad
 import "monads-tf" Control.Monad.State (lift, MonadTrans)

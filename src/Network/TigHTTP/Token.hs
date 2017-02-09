@@ -5,7 +5,6 @@ module Network.TigHTTP.Token (
 	) where
 
 import Data.Char (isAscii)
-import Control.Applicative
 
 isCtl, isSeparator, isTokenChar, isTextChar, isQdtextChar :: Char -> Bool
 isCtl = (`elem` (['\0' .. '\31'] ++ "\DEL"))

@@ -1,8 +1,7 @@
 module Network.TigHTTP.CookieTime (
 	cookieExpiresTime, parseCookieExpiresTime) where
 
-import Data.Time
-import System.Locale
+import Data.Time (UTCTime, formatTime, parseTime, defaultTimeLocale)
 
 import qualified Data.ByteString.Char8 as BSC
 
